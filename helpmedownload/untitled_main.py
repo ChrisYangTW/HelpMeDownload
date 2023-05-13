@@ -28,40 +28,71 @@ class Ui_MainWindow(object):
         self.centralwidget.setObjectName(u"centralwidget")
         self.verticalLayout = QVBoxLayout(self.centralwidget)
         self.verticalLayout.setObjectName(u"verticalLayout")
-        self.horizontalLayout = QHBoxLayout()
-        self.horizontalLayout.setObjectName(u"horizontalLayout")
-        self.label = QLabel(self.centralwidget)
-        self.label.setObjectName(u"label")
+        self.horizontalLayout_1 = QHBoxLayout()
+        self.horizontalLayout_1.setObjectName(u"horizontalLayout_1")
+        self.url_label = QLabel(self.centralwidget)
+        self.url_label.setObjectName(u"url_label")
 
-        self.horizontalLayout.addWidget(self.label)
+        self.horizontalLayout_1.addWidget(self.url_label)
 
-        self.lineEdit = QLineEdit(self.centralwidget)
-        self.lineEdit.setObjectName(u"lineEdit")
+        self.url_line_edit = QLineEdit(self.centralwidget)
+        self.url_line_edit.setObjectName(u"url_line_edit")
 
-        self.horizontalLayout.addWidget(self.lineEdit)
+        self.horizontalLayout_1.addWidget(self.url_line_edit)
 
         self.parser_push_button = QPushButton(self.centralwidget)
         self.parser_push_button.setObjectName(u"parser_push_button")
 
-        self.horizontalLayout.addWidget(self.parser_push_button)
+        self.horizontalLayout_1.addWidget(self.parser_push_button)
 
 
-        self.verticalLayout.addLayout(self.horizontalLayout)
+        self.verticalLayout.addLayout(self.horizontalLayout_1)
+
+        self.horizontalLayout_2 = QHBoxLayout()
+        self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
+        self.folder_label = QLabel(self.centralwidget)
+        self.folder_label.setObjectName(u"folder_label")
+
+        self.horizontalLayout_2.addWidget(self.folder_label)
+
+        self.folder_line_edit = QLineEdit(self.centralwidget)
+        self.folder_line_edit.setObjectName(u"folder_line_edit")
+        self.folder_line_edit.setEnabled(False)
+
+        self.horizontalLayout_2.addWidget(self.folder_line_edit)
+
+        self.choose_folder_button = QPushButton(self.centralwidget)
+        self.choose_folder_button.setObjectName(u"choose_folder_button")
+
+        self.horizontalLayout_2.addWidget(self.choose_folder_button)
+
+
+        self.verticalLayout.addLayout(self.horizontalLayout_2)
+
+        self.parser_text_browser = QTextBrowser(self.centralwidget)
+        self.parser_text_browser.setObjectName(u"parser_text_browser")
+
+        self.verticalLayout.addWidget(self.parser_text_browser)
 
         self.ready_to_go_push_button = QPushButton(self.centralwidget)
         self.ready_to_go_push_button.setObjectName(u"ready_to_go_push_button")
 
         self.verticalLayout.addWidget(self.ready_to_go_push_button)
 
-        self.text_browser = QTextBrowser(self.centralwidget)
-        self.text_browser.setObjectName(u"text_browser")
+        self.result_text_browser = QTextBrowser(self.centralwidget)
+        self.result_text_browser.setObjectName(u"result_text_browser")
 
-        self.verticalLayout.addWidget(self.text_browser)
+        self.verticalLayout.addWidget(self.result_text_browser)
 
+        self.verticalLayout.setStretch(0, 1)
+        self.verticalLayout.setStretch(1, 1)
+        self.verticalLayout.setStretch(2, 3)
+        self.verticalLayout.setStretch(3, 1)
+        self.verticalLayout.setStretch(4, 3)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 800, 37))
+        self.menubar.setGeometry(QRect(0, 0, 800, 24))
         MainWindow.setMenuBar(self.menubar)
         self.statusbar = QStatusBar(MainWindow)
         self.statusbar.setObjectName(u"statusbar")
@@ -74,8 +105,10 @@ class Ui_MainWindow(object):
 
     def retranslateUi(self, MainWindow):
         MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"Help Me Download (just for Civit)", None))
-        self.label.setText(QCoreApplication.translate("MainWindow", u"Url", None))
+        self.url_label.setText(QCoreApplication.translate("MainWindow", u"Url", None))
         self.parser_push_button.setText(QCoreApplication.translate("MainWindow", u"Parser", None))
+        self.folder_label.setText(QCoreApplication.translate("MainWindow", u"Fodler", None))
+        self.choose_folder_button.setText(QCoreApplication.translate("MainWindow", u"Folder", None))
         self.ready_to_go_push_button.setText(QCoreApplication.translate("MainWindow", u"Ready To Go", None))
     # retranslateUi
 

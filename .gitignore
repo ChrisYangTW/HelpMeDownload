@@ -162,3 +162,4 @@ cython_debug/
 
 example/
 try_code/
+.DS_Store

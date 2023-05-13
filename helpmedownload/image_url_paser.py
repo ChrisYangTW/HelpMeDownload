@@ -1,3 +1,7 @@
+"""
+download, with Python threadpool
+"""
+
 import re
 import concurrent.futures
 from pathlib import Path
@@ -20,10 +24,10 @@ def get_model_and_version_and_status(url: str = '', for_test: bool = False) -> t
         except (httpx.TimeoutException, httpx.RequestError) as e:
             status = False
 
-    if match := re.search(r'models/(?P<model_id>\d+)[?]modelVersionId=(?P<model_version_id>\d+)', url):
+    if match := re.search(r'models/(?P<model_id>\d{4,5})[?]modelVersionId=(?P<model_version_id>\d{5})', url):
         m_id, v_id = match['model_id'], match['model_version_id']
         return m_id, v_id, status
-    elif match := re.search(r'models/(?P<model_id>\d+)', url):
+    elif match := re.search(r'models/(?P<model_id>\d{4,5})/', url):
         m_id = match['model_id']
         return m_id, None, status
     else:
