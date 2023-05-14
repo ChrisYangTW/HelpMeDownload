@@ -46,7 +46,7 @@ if __name__ == '__main__':
 
         def initUI(self):
             self.setWindowTitle('Button Window')
-            self.setGeometry(100, 100, 800, 600)
+            self.resize(800, 600)
             widget = QWidget()
             v_layout = QVBoxLayout()
             widget.setLayout(v_layout)

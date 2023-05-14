@@ -5,14 +5,16 @@ import httpx
 from PySide6.QtCore import QObject, Signal, QRunnable, Slot
 
 
-class CivitalUrlParserWorker(QObject):
-    """
-    Parse the URL to obtain the model name and its related information. (self.model_name, self.model_version_info_dict)
-    """
+class CivitalUrlParserRunnerSignals(QObject):
     UrlParser_progress_signal = Signal(str)
     UrlParser_status_signal = Signal(tuple)
     UrlParser_completed_signal = Signal(tuple)
 
+
+class CivitalUrlParserRunner(QRunnable):
+    """
+    Parse the URL to obtain the model name and its related information. (self.model_name, self.model_version_info_dict)
+    """
     def __init__(self, url: str, test_mode=False):
         """
         :param url:
@@ -23,6 +25,7 @@ class CivitalUrlParserWorker(QObject):
         self.civitai_image_api_url = r'https://civitai.com/api/v1/images'
 
         self.httpx_client = httpx.Client()
+        self.signals = CivitalUrlParserRunnerSignals()
 
         self.url = url
         self.test_mode = test_mode
@@ -30,13 +33,14 @@ class CivitalUrlParserWorker(QObject):
         self.model_name = ''
         self.model_version_info_dict = {}
 
-    def parser(self):
-        self.UrlParser_progress_signal.emit(f'Start to parser {self.url}')
+    @Slot()
+    def run(self) -> None:
+        self.signals.UrlParser_progress_signal.emit(f'Start to parser {self.url}')
         if parser_result := self.get_model_and_version_and_status(self.url, self.test_mode):
             # test_mode, parser failed, connection failed, none of them continue
             if parser_result[-1]:
                 self.get_model_version_info(*parser_result[:-1])
-                self.UrlParser_completed_signal.emit((self.model_name, self.model_version_info_dict))
+                self.signals.UrlParser_completed_signal.emit((self.model_name, self.model_version_info_dict))
 
     def get_model_and_version_and_status(self, url: str = '', test_mode: bool = False) -> tuple | bool:
         """
@@ -55,14 +59,14 @@ class CivitalUrlParserWorker(QObject):
 
         if match := re.search(r'models/(?P<model_id>\d{4,5})[?]modelVersionId=(?P<model_version_id>\d{5})', url):
             m_id, v_id = match['model_id'], match['model_version_id']
-            self.UrlParser_status_signal.emit((m_id, v_id, status))
+            self.signals.UrlParser_status_signal.emit((m_id, v_id, status))
             return m_id, v_id, status
         elif match := re.search(r'models/(?P<model_id>\d{4,5})/', url):
             m_id = match['model_id']
-            self.UrlParser_status_signal.emit((m_id, None, status))
+            self.signals.UrlParser_status_signal.emit((m_id, None, status))
             return m_id, None, status
         else:
-            self.UrlParser_status_signal.emit((None, None, False))  # the url parser fails, set the status to false
+            self.signals.UrlParser_status_signal.emit((None, None, False))  # parser fails, set the status to false
             return False
 
     def get_model_version_info(self, model_id: str = '', model_version_id: str = '') -> None:
@@ -151,7 +155,7 @@ class CivitaImageDownloadRunner(QRunnable):
 
     @Slot()
     def run(self) -> None:
-        self.signals.image_download_started_signal.emit(f'Start to download {self.url}')
+        self.signals.image_download_started_signal.emit(f'Start to: {self.url}')
 
         try:
             response = self.httpx_client.get(self.url, follow_redirects=True)
@@ -161,7 +165,7 @@ class CivitaImageDownloadRunner(QRunnable):
                 with open(f'{self.save_path}', 'wb') as f:
                     for data in response.iter_bytes():
                         f.write(data)
-                self.signals.image_download_completed_signal.emit((self.version_id, f'{self.url} downloaded'))
+                self.signals.image_download_completed_signal.emit((self.version_id, f'Finished: {self.url}'))
             elif response.status_code == httpx.codes.FOUND:
                 self.url = response.headers.get('Location')
                 return self.run()
@@ -170,4 +174,10 @@ class CivitaImageDownloadRunner(QRunnable):
 
         except httpx.HTTPStatusError as e:
             print(f'Failed to download image from {self.url}. Reason: {str(e)}')
-            self.signals.image_download_fail_signal.emit(f'{self.url} fail')
+            self.signals.image_download_fail_signal.emit(f'Warning:: download fail: {self.url}')
+        except httpx.ReadTimeout as e:
+            print(f'ReadTimeout: {self.url}')
+        except Exception as e:
+            print(f'{e= }, {self.url}')
+        # todo: handle exception, need to control "handle_progress_bar_value_changed" (main.py)
+        # todo: Handle incomplete download (need to enable some buttons)
