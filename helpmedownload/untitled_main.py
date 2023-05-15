@@ -28,6 +28,8 @@ class Ui_MainWindow(object):
         MainWindow.resize(800, 600)
         self.actionShowHistory = QAction(MainWindow)
         self.actionShowHistory.setObjectName(u"actionShowHistory")
+        self.actionShowFailUrl = QAction(MainWindow)
+        self.actionShowFailUrl.setObjectName(u"actionShowFailUrl")
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
         self.verticalLayout = QVBoxLayout(self.centralwidget)
@@ -100,7 +102,7 @@ class Ui_MainWindow(object):
         self.verticalLayout.setStretch(1, 1)
         self.verticalLayout.setStretch(2, 2)
         self.verticalLayout.setStretch(3, 1)
-        self.verticalLayout.setStretch(4, 3)
+        self.verticalLayout.setStretch(4, 2)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
@@ -114,6 +116,7 @@ class Ui_MainWindow(object):
 
         self.menubar.addAction(self.menuhelp.menuAction())
         self.menuhelp.addAction(self.actionShowHistory)
+        self.menuhelp.addAction(self.actionShowFailUrl)
 
         self.retranslateUi(MainWindow)
 
@@ -123,11 +126,12 @@ class Ui_MainWindow(object):
     def retranslateUi(self, MainWindow):
         MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"Help Me Download (just for Civit)", None))
         self.actionShowHistory.setText(QCoreApplication.translate("MainWindow", u"Show History", None))
+        self.actionShowFailUrl.setText(QCoreApplication.translate("MainWindow", u"Show Failed URLs", None))
         self.folder_label.setText(QCoreApplication.translate("MainWindow", u"Folder", None))
         self.choose_folder_button.setText(QCoreApplication.translate("MainWindow", u"Folder", None))
         self.url_label.setText(QCoreApplication.translate("MainWindow", u"Url", None))
         self.parser_push_button.setText(QCoreApplication.translate("MainWindow", u"Parser", None))
         self.ready_to_go_push_button.setText(QCoreApplication.translate("MainWindow", u"Ready To Go", None))
-        self.menuhelp.setTitle(QCoreApplication.translate("MainWindow", u"help", None))
+        self.menuhelp.setTitle(QCoreApplication.translate("MainWindow", u"Help", None))
     # retranslateUi
 

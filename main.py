@@ -28,41 +28,56 @@ class MainWindow(QMainWindow):
         self.save_dir = ''
         self.progress_bar_alive_list = []
         self.progress_bar_info = {}
-        self.history_list = []
+        self.download_history_list = []
+        self.download_failed_urls_dict = {}
 
-        self.ui.actionShowHistory.triggered.connect(self.trigger_show_history_action)
+        self.ui.actionShowHistory.triggered.connect(lambda: self.trigger_show_action(self.download_history_list))
+        self.ui.actionShowFailUrl.triggered.connect(lambda: self.trigger_show_action(
+            self.convert_failed_urls_dict_to_list(self.download_failed_urls_dict)
+        ))
         self.ui.choose_folder_button.clicked.connect(self.click_choose_folder_button)
-        self.ui.parser_push_button.clicked.connect(self.click_parser_button)
+        self.ui.parser_push_button.clicked.connect(self.click_parse_button)
         self.ui.ready_to_go_push_button.clicked.connect(self.click_ready_to_go_button)
 
+        # When url_line_edit is modified, request a re-parsing
         self.ui.url_line_edit.textChanged.connect(lambda: self.ui.ready_to_go_push_button.setEnabled(False))
 
-    def trigger_show_history_action(self):
+    def trigger_show_action(self, history: list) -> None:
         """
         Pop up a QDialog window for show history
         :return: 
         """""
-        history_window = HistoryWindow(history=self.history_list, parent=self)
+        history_window = HistoryWindow(history=history, parent=self)
         # Only after this QDialog is closed, the main window can be used again
         history_window.setWindowModality(Qt.ApplicationModal)
         history_window.show()
 
-    def click_parser_button(self):
+    def click_choose_folder_button(self) -> None:
         """
-        # todo: ...
+        Set the path for saving the image
+        :return:
+        """
+        options = QFileDialog.Options()
+        options |= QFileDialog.ShowDirsOnly
+        folder = QFileDialog.getExistingDirectory(self, "Select Folder", options=options)
+        self.ui.folder_line_edit.setText(folder)
+        self.save_dir = Path(folder)
+
+    def click_parse_button(self) -> None:
+        """
+        Parse the URL using QThreadPool
         :return:
         """
         url = self.ui.url_line_edit.text()
         civital_url_parser = CivitalUrlParserRunner(url)
-
-        civital_url_parser.signals.UrlParser_progress_signal.connect(self.handle_parser_progress_signal)
+        civital_url_parser.signals.UrlParser_started_signal.connect(self.handle_parser_started_signal)
         civital_url_parser.signals.UrlParser_status_signal.connect(self.handle_parser_status_signal)
         civital_url_parser.signals.UrlParser_completed_signal.connect(self.handle_parser_completed_signal)
 
         self.pool.start(civital_url_parser)
 
-    def handle_parser_progress_signal(self, string: str):
-        self.ui.parser_text_browser.append(string)
+    def handle_parser_started_signal(self, started_message: str):
+        self.ui.parser_text_browser.append(started_message)
 
     def handle_parser_status_signal(self, model_and_version_and_status: tuple):
         """
@@ -93,16 +108,10 @@ class MainWindow(QMainWindow):
         else:
             self.ui.result_text_browser.append('need to set folder before parser')
 
-    def click_choose_folder_button(self):
-        options = QFileDialog.Options()
-        options |= QFileDialog.ShowDirsOnly
-        folder = QFileDialog.getExistingDirectory(self, "Select Folder", options=options)
-        self.ui.folder_line_edit.setText(folder)
-        self.save_dir = Path(folder)
-
     def click_ready_to_go_button(self):
         """
         need: self.model_version_info_dict is correct
+        Start to download all images
         :return:
         """
         self.ui.url_line_edit.setEnabled(False)
@@ -131,43 +140,71 @@ class MainWindow(QMainWindow):
 
     def add_progress_bar(self, version_id: str, image_count: int):
         self.progress_bar_alive_list.append(version_id)
-        self.progress_bar_info[version_id] = [QProgressBar(maximum=image_count), 0, image_count]
-        self.progress_bar_info[version_id][0].valueChanged.connect(
-            lambda value: self.handle_progress_bar_value_changed(value, version_id, image_count)
-        )
+        # about progress_bar_info:
+        # {version_id: [ProgressBar widget object, downloaded, executed, Quantity of all images], ... }
+        self.progress_bar_info[version_id] = [QProgressBar(maximum=image_count), 0, 0, image_count]
         self.ui.verticalLayout.addWidget(self.progress_bar_info[version_id][0])
 
-    def handle_image_download_started_signal(self, string: str):
-        self.ui.result_text_browser.append(string)
-        self.history_list.append(f'{datetime.now().strftime("%m-%d %H:%M:%S")} : {string}')
+    def handle_image_download_started_signal(self, started_message: str):
+        self.download_history_list.append(f'{datetime.now().strftime("%m-%d %H:%M:%S")} : {started_message}')
 
-    def handle_image_download_fail_signal(self, string: str):
-        self.ui.result_text_browser.append(string)
-        self.history_list.append(f'{datetime.now().strftime("%m-%d %H:%M:%S")} : {string}')
+    def handle_image_download_fail_signal(self, fail_info: tuple):
+        version_id, fail_message = fail_info
+        self.progress_bar_info[version_id][2] += 1  # executed count
 
-    def handle_image_download_completed_signal(self, info: tuple):
-        version_id, string = info
-        count = self.progress_bar_info[version_id][1] + 1
-        self.progress_bar_info[version_id][1] = count
-        self.progress_bar_info[version_id][0].setValue(count)
-        self.ui.result_text_browser.append(string)
-        self.history_list.append(f'{datetime.now().strftime("%m-%d %H:%M:%S")} : {string}')
+        download_fail_url = fail_message.split(':')[-1].strip()
+        if version_id not in self.download_failed_urls_dict:
+            self.download_failed_urls_dict[version_id] = []
+        self.download_failed_urls_dict[version_id].append(download_fail_url)
+        self.download_history_list.append(f'{datetime.now().strftime("%m-%d %H:%M:%S")} : {fail_message}')
+
+        self.handle_download_task(version_id)
+
+    def handle_image_download_completed_signal(self, completed_info: tuple):
+        version_id, completed_message = completed_info
+        self.progress_bar_info[version_id][2] += 1  # executed count
+
+        downloaded_count = self.progress_bar_info[version_id][1] + 1
+        self.progress_bar_info[version_id][1] = downloaded_count
+        self.progress_bar_info[version_id][0].setValue(downloaded_count)
+        self.download_history_list.append(f'{datetime.now().strftime("%m-%d %H:%M:%S")} : {completed_message}')
+
+        self.handle_download_task(version_id)
+
+    def handle_download_task(self, version_id: str):
+        version_progress_bar_info = self.progress_bar_info[version_id]
+        if version_progress_bar_info[2] == version_progress_bar_info[3]:
+            self.progress_bar_alive_list.remove(version_id)
 
         if not self.progress_bar_alive_list:
             self.ui.url_line_edit.setEnabled(True)
             self.ui.parser_push_button.setEnabled(True)
             self.ui.choose_folder_button.setEnabled(True)
 
-    def handle_progress_bar_value_changed(self, value, version_id, image_count):
-        if value == image_count:
-            self.progress_bar_alive_list.remove(version_id)
+            self.ui.result_text_browser.append(f'Download task for "{self.model_name}" has been completed')
+            self.ui.result_text_browser.append(
+                'If the progress bar is not at 100%, it means there are URLs that failed to download. Please go to '
+                'Help > Show Failed URLs to view them.'
+            )
 
     def text_browser_insert_html(self, html_string: str):
         self.ui.parser_text_browser.append('')
         self.ui.parser_text_browser.insertHtml(html_string)
         self.ui.parser_text_browser.setCurrentCharFormat(QTextCharFormat())
 
+    @staticmethod
+    def convert_failed_urls_dict_to_list(download_fail_url_dict: dict) -> list:
+        download_failed_urls_list = []
+        for version_id,  fail_urls in download_fail_url_dict.items():
+            download_failed_urls_list.append(f'{version_id}:')
+            download_failed_urls_list.extend(iter(fail_urls))
+        return download_failed_urls_list
+
     def clear_progress_bar(self):
+        """
+        Clear all progress bars
+        :return:
+        """
         if self.progress_bar_info:
             for value in self.progress_bar_info.values():
                 widget = value[0]
