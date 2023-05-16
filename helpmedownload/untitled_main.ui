@@ -59,9 +59,9 @@
        <widget class="QLineEdit" name="url_line_edit"/>
       </item>
       <item>
-       <widget class="QPushButton" name="parser_push_button">
+       <widget class="QPushButton" name="parse_push_button">
         <property name="text">
-         <string>Parser</string>
+         <string>Parse</string>
         </property>
        </widget>
       </item>
@@ -93,7 +93,7 @@
    </property>
    <widget class="QMenu" name="menuhelp">
     <property name="title">
-     <string>Help</string>
+     <string>Show</string>
     </property>
     <addaction name="actionShowHistory"/>
     <addaction name="actionShowFailUrl"/>

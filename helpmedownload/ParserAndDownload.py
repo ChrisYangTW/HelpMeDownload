@@ -38,7 +38,7 @@ class CivitalUrlParserRunner(QRunnable):
 
     @Slot()
     def run(self) -> None:
-        self.signals.UrlParser_started_signal.emit(f'Start to parser {self.url}')
+        self.signals.UrlParser_started_signal.emit(f'Start to parse: {self.url}')
         if parser_result := self.get_model_and_version_and_status(self.url, self.test_mode):
             # test_mode, parser failed, connection failed, none of them continue
             if parser_result[-1]:
@@ -48,6 +48,7 @@ class CivitalUrlParserRunner(QRunnable):
     def get_model_and_version_and_status(self, url: str = '', test_mode: bool = False) -> tuple | bool:
         """
         Get the analysis result and connection status of the URL, and emit the information (M_ID, V_ID, status)
+        to main thread
         :param url:
         :param test_mode: set to True, only the URL will be parsed without attempting to connect and obtain information
         :return:
@@ -69,7 +70,7 @@ class CivitalUrlParserRunner(QRunnable):
             self.signals.UrlParser_status_signal.emit((m_id, None, status))
             return m_id, None, status
         else:
-            self.signals.UrlParser_status_signal.emit((None, None, False))  # parser fails, set the status to false
+            self.signals.UrlParser_status_signal.emit((None, None, False))  # parse fails, set the status to false
             return False
 
     def get_model_version_info(self, model_id: str = '', model_version_id: str = '') -> None:
@@ -139,18 +140,19 @@ class CivitaImageDownloadRunnerSignals(QObject):
     """
     Signals for CivitaImageDownloadRunner class
     """
-    image_download_started_signal = Signal(str)
-    image_download_fail_signal = Signal(tuple)
-    image_download_completed_signal = Signal(tuple)
+    Image_download_started_signal = Signal(str)
+    Image_download_fail_signal = Signal(tuple)
+    Image_download_completed_signal = Signal(tuple)
 
 
 class CivitaImageDownloadRunner(QRunnable):
     """
     Download images with support for QThreadPool
     """
-    def __init__(self, version_id: str, image_url: str, save_path: Path, client: httpx.Client):
+    def __init__(self, version_id: str, version_name: str, image_url: str, save_path: Path, client: httpx.Client):
         super().__init__()
         self.version_id = version_id
+        self.version_name = version_name
         self.url = image_url
         self.save_path = save_path
         self.httpx_client = client
@@ -158,7 +160,7 @@ class CivitaImageDownloadRunner(QRunnable):
 
     @Slot()
     def run(self) -> None:
-        self.signals.image_download_started_signal.emit(f'Start to: {self.url}')
+        self.signals.Image_download_started_signal.emit(f'Start to: {self.url}')
 
         try:
             response = self.httpx_client.get(self.url, follow_redirects=True)
@@ -168,7 +170,7 @@ class CivitaImageDownloadRunner(QRunnable):
                 with open(f'{self.save_path}', 'wb') as f:
                     for data in response.iter_bytes():
                         f.write(data)
-                self.signals.image_download_completed_signal.emit((self.version_id, f'Finished: {self.url}'))
+                self.signals.Image_download_completed_signal.emit((self.version_id, f'Finished: {self.url}'))
             elif response.status_code == httpx.codes.FOUND:
                 self.url = response.headers.get('Location')
                 return self.run()
@@ -177,10 +179,10 @@ class CivitaImageDownloadRunner(QRunnable):
 
         except httpx.HTTPStatusError as e:
             print('\033[33m' + f'HTTPStatusError: {self.url}. Reason: {str(e)}' + '\033[0m')
-            self.signals.image_download_fail_signal.emit((self.version_id, f'Fail: HTTPStatusError: {self.url}'))
+            self.signals.Image_download_fail_signal.emit((self.version_id, f'Failed_HTTPStatusError:: {self.url}'))
         except httpx.ReadTimeout as e:
             print('\033[33m' + f'ReadTimeout: {self.url}. Reason: {str(e)}' + '\033[0m')
-            self.signals.image_download_fail_signal.emit((self.version_id, f'Fail: ReadTimeout: {self.url}'))
+            self.signals.Image_download_fail_signal.emit((self.version_id, f'Failed_ReadTimeout:: {self.url}'))
         except Exception as e:
             print('\033[33m' + f'Exception: {self.url}. Reason: {str(e)}' + '\033[0m')
-            self.signals.image_download_fail_signal.emit((self.version_id, f'Fail: Exception: {self.url}'))
+            self.signals.Image_download_fail_signal.emit((self.version_id, f'Failed_Exception:: {self.url}'))

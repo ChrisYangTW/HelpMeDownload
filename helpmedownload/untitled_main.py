@@ -72,10 +72,10 @@ class Ui_MainWindow(object):
 
         self.horizontalLayout_2.addWidget(self.url_line_edit)
 
-        self.parser_push_button = QPushButton(self.centralwidget)
-        self.parser_push_button.setObjectName(u"parser_push_button")
+        self.parse_push_button = QPushButton(self.centralwidget)
+        self.parse_push_button.setObjectName(u"parse_push_button")
 
-        self.horizontalLayout_2.addWidget(self.parser_push_button)
+        self.horizontalLayout_2.addWidget(self.parse_push_button)
 
         self.horizontalLayout_2.setStretch(0, 1)
         self.horizontalLayout_2.setStretch(1, 15)
@@ -130,8 +130,8 @@ class Ui_MainWindow(object):
         self.folder_label.setText(QCoreApplication.translate("MainWindow", u"Folder", None))
         self.choose_folder_button.setText(QCoreApplication.translate("MainWindow", u"Folder", None))
         self.url_label.setText(QCoreApplication.translate("MainWindow", u"Url", None))
-        self.parser_push_button.setText(QCoreApplication.translate("MainWindow", u"Parser", None))
+        self.parse_push_button.setText(QCoreApplication.translate("MainWindow", u"Parse", None))
         self.ready_to_go_push_button.setText(QCoreApplication.translate("MainWindow", u"Ready To Go", None))
-        self.menuhelp.setTitle(QCoreApplication.translate("MainWindow", u"Help", None))
+        self.menuhelp.setTitle(QCoreApplication.translate("MainWindow", u"Show", None))
     # retranslateUi
 

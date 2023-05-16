@@ -5,14 +5,14 @@ class HistoryWindow(QDialog):
     """
     QDialog window for show history
     """
-    def __init__(self, history: list = None, parent=None):
+    def __init__(self, history: list = None, special: bool = False,parent=None):
         super().__init__(parent)
         self.setWindowTitle('History')
         self.setGeometry(100, 100, 600, 400)
 
-        layout = QVBoxLayout(self)
+        v_layout = QVBoxLayout(self)
         self.display_text_browser = QTextBrowser(self)
-        layout.addWidget(self.display_text_browser)
+        v_layout.addWidget(self.display_text_browser)
 
         # Move the QDialog window to the center of the main window
         if self.parentWidget():
@@ -20,11 +20,26 @@ class HistoryWindow(QDialog):
             self.move(center_point.x() - self.width() / 2, center_point.y() - self.height() / 2)
 
         self.history = history
-        self.append_history_to_text_browser()
+        if special:
+            self.show_history_to_text_browser_for_failed_urls()
+        else:
+            self.show_history_to_text_browser()
 
-    def append_history_to_text_browser(self):
+    def show_history_to_text_browser_for_failed_urls(self):
         """
-        Append history to TextBrowser
+        Append the historical records to TextBrowser (Using HTML syntax to make URLs clickable for users)
+        :return:
+        """
+        self.display_text_browser.setOpenExternalLinks(True)
+        for history in self.history:
+            if 'Version' in history:
+                self.display_text_browser.insertHtml(f'<span>{history}</span><br>')
+            else:
+                self.display_text_browser.insertHtml(f'<a href="{history}">{history}</a><br>')
+
+    def show_history_to_text_browser(self):
+        """
+        Append the historical records to TextBrowser
         :return:
         """
         for history in self.history:
