@@ -79,6 +79,7 @@ class MainWindow(QMainWindow):
         civital_url_parser = CivitalUrlParserRunner(url)
         civital_url_parser.signals.UrlParser_started_signal.connect(self.handle_parser_started_signal)
         civital_url_parser.signals.UrlParser_status_signal.connect(self.handle_parser_status_signal)
+        civital_url_parser.signals.UrlParser_connect_failed_signal.connect(self.handle_parser_connect_failed_signal)
         civital_url_parser.signals.UrlParser_completed_signal.connect(self.handle_parser_completed_signal)
 
         self.pool.start(civital_url_parser)
@@ -113,6 +114,13 @@ class MainWindow(QMainWindow):
                 self.ui.choose_folder_button.setEnabled(True)
             case _:
                 self.ui.parser_text_browser.append(f'URL parse success [{str(self.model_and_version_id)}]')
+
+    def handle_parser_connect_failed_signal(self, failed_message: str):
+        self.ui.parser_text_browser.insertHtml(
+            f'<br><span style="color: pink;">{failed_message}</span><br>'
+        )
+        self.ui.parse_push_button.setEnabled(True)
+        self.ui.choose_folder_button.setEnabled(True)
 
     def handle_parser_completed_signal(self, info: tuple):
         """
