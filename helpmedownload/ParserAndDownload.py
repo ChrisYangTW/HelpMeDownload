@@ -62,7 +62,7 @@ class CivitalUrlParserRunner(QRunnable):
                 print(e)
                 status = False
 
-        if match := re.search(r'models/(?P<model_id>\d{4,5})[?]modelVersionId=(?P<model_version_id>\d{5})', url):
+        if match := re.search(r'models/(?P<model_id>\d{4,5})[?]modelVersionId=(?P<model_version_id>\d{4,5})', url):
             m_id, v_id = match['model_id'], match['model_version_id']
             self.signals.UrlParser_status_signal.emit((m_id, v_id, status))
             return m_id, v_id, status
@@ -103,7 +103,7 @@ class CivitalUrlParserRunner(QRunnable):
                     if version_id != model_version_id:
                         continue
                     self.construct_model_version_info_dict(version_id, version_name, creator_name)
-                    return
+                    break
 
                 self.construct_model_version_info_dict(version_id, version_name, creator_name)
 

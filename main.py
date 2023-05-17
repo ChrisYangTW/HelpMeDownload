@@ -153,8 +153,11 @@ class MainWindow(QMainWindow):
         self.clear_progress_bar()
 
         for version_id, info in self.model_version_info_dict.items():
-            version_name = info['name']
             image_urls = info['image_url']
+            # Skip versions that  no longer have images available
+            if not image_urls:
+                continue
+            version_name = info['name']
             # Avoid recognizing the name as a folder during path concatenation when it contains / or \ in its name
             fixed_model_name = self.model_name.replace('/', '_').replace('\\', '_')
             path = self.save_dir / Path(fixed_model_name) / Path(version_name)
