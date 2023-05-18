@@ -19,7 +19,7 @@ class CivitalUrlParserRunner(QRunnable):
     """
     Parse the URL to obtain the model name and its related information. (self.model_name, self.model_version_info_dict)
     """
-    def __init__(self, url: str, test_mode=False):
+    def __init__(self, url: str, httpx_client: httpx.Client,test_mode=False):
         """
         :param url:
         :param test_mode: set to True, only the URL will be parsed without attempting to connect and obtain information
@@ -28,7 +28,7 @@ class CivitalUrlParserRunner(QRunnable):
         self.civitai_models_api_url = r'https://civitai.com/api/v1/models/'
         self.civitai_image_api_url = r'https://civitai.com/api/v1/images'
 
-        self.httpx_client = httpx.Client()
+        self.httpx_client = httpx_client
         self.signals = CivitalUrlParserRunnerSignals()
 
         self.url = url
@@ -53,25 +53,27 @@ class CivitalUrlParserRunner(QRunnable):
         :param test_mode: set to True, only the URL will be parsed without attempting to connect and obtain information
         :return:
         """
+        error_message = ''
+
         if test_mode:
             status = None
         else:
             try:
                 status = self.httpx_client.get(url).status_code == httpx.codes.OK
             except (httpx.TimeoutException, httpx.RequestError, httpx.ReadTimeout) as e:
-                print(e)
+                error_message = e
                 status = False
 
         if match := re.search(r'models/(?P<model_id>\d{4,5})[?]modelVersionId=(?P<model_version_id>\d{4,5})', url):
             m_id, v_id = match['model_id'], match['model_version_id']
-            self.signals.UrlParser_status_signal.emit((m_id, v_id, status))
+            self.signals.UrlParser_status_signal.emit((m_id, v_id, status, error_message))
             return m_id, v_id, status
         elif match := re.search(r'models/(?P<model_id>\d{4,5})/', url):
             m_id = match['model_id']
-            self.signals.UrlParser_status_signal.emit((m_id, None, status))
+            self.signals.UrlParser_status_signal.emit((m_id, None, status, error_message))
             return m_id, None, status
         else:
-            self.signals.UrlParser_status_signal.emit((None, None, False))  # parse fails, set the status to false
+            self.signals.UrlParser_status_signal.emit((None, None, False, error_message))  # parse fails, set the status to false
             return False
 
     def get_model_version_info(self, model_id: str = '', model_version_id: str = '') -> None:

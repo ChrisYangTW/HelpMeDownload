@@ -76,7 +76,7 @@ class MainWindow(QMainWindow):
         self.ui.choose_folder_button.setEnabled(False)
         url = self.ui.url_line_edit.text()
 
-        civital_url_parser = CivitalUrlParserRunner(url)
+        civital_url_parser = CivitalUrlParserRunner(url, self.httpx_client)
         civital_url_parser.signals.UrlParser_started_signal.connect(self.handle_parser_started_signal)
         civital_url_parser.signals.UrlParser_status_signal.connect(self.handle_parser_status_signal)
         civital_url_parser.signals.UrlParser_connect_failed_signal.connect(self.handle_parser_connect_failed_signal)
@@ -91,8 +91,8 @@ class MainWindow(QMainWindow):
         """
         Display the corresponding content based on the contents of "model_and_version_and_status"
         """
-        status = model_and_version_and_status[-1]
-        self.model_and_version_id = model_and_version_and_status[:-1]
+        status, error_message = model_and_version_and_status[-2:]
+        self.model_and_version_id = model_and_version_and_status[:-2]
 
         match status:
             case None:
@@ -103,10 +103,12 @@ class MainWindow(QMainWindow):
                 self.ui.choose_folder_button.setEnabled(True)
             case False:
                 if self.model_and_version_id == (None, None):
-                    self.text_browser_insert_html('<span style="color: pink;">URL parse failed.</span><br>')
+                    self.text_browser_insert_html(
+                        f'<span style="color: pink;">URL parse failed. {error_message}</span><br>'
+                    )
                 else:
                     self.ui.parser_text_browser.append(
-                        f'URL parse success [{str(self.model_and_version_id)}], but connect to URL fail.'
+                        f'URL parse success [{str(self.model_and_version_id)}], but connect to URL fail. {error_message}'
                     )
                     self.ui.parser_text_browser.append('')
                     self.ui.statusbar.showMessage('Connect to URL fail.', 3000)
