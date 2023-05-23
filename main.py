@@ -137,7 +137,9 @@ class MainWindow(QMainWindow):
             self.ui.ready_to_go_push_button.setEnabled(True)
         else:
             self.ui.parser_text_browser.insertHtml(
-                '<br><span style="color: green;">Storage path is not set. Please configure it before parsing the URL again.</span><br>'
+                '<br><span style="color: green;">'
+                'Storage path is not set. Please configure it before parsing the URL again.'
+                '</span><br>'
             )
 
         self.ui.parse_push_button.setEnabled(True)

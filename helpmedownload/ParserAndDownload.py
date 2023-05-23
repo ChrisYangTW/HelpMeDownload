@@ -19,7 +19,7 @@ class CivitalUrlParserRunner(QRunnable):
     """
     Parse the URL to obtain the model name and its related information. (self.model_name, self.model_version_info_dict)
     """
-    def __init__(self, url: str, httpx_client: httpx.Client,test_mode=False):
+    def __init__(self, url: str, httpx_client: httpx.Client, test_mode=False):
         """
         :param url:
         :param test_mode: set to True, only the URL will be parsed without attempting to connect and obtain information
@@ -79,7 +79,7 @@ class CivitalUrlParserRunner(QRunnable):
     def get_model_version_info(self, model_id: str = '', model_version_id: str = '') -> None:
         """
         Get the information {version id: {version name, creator name, image url}} contained in the model.
-        {'version_id': {'name': version_name, 'creator': creator_name, 'image_url': ['url1', 'url2', ..]}, ... }
+        finally, emit (self.model_name, self.model_version_info_dict) to UrlParser_completed_signal.
         :param model_id:
         :param model_version_id:
         :return:
@@ -99,30 +99,72 @@ class CivitalUrlParserRunner(QRunnable):
             for version in models_json_data.get('modelVersions'):
                 version_id = str(version['id'])
                 version_name = version['name']
+                file_info_dict = self.get_version_file_info_dict(version)
 
                 # for only downloading a specific version
                 if model_version_id:
                     if version_id != model_version_id:
                         continue
-                    self.construct_model_version_info_dict(version_id, version_name, creator_name)
+                    self.construct_model_version_info_dict(version_id, version_name, creator_name, file_info_dict)
                     break
 
-                self.construct_model_version_info_dict(version_id, version_name, creator_name)
+                self.construct_model_version_info_dict(version_id, version_name, creator_name, file_info_dict)
 
         self.signals.UrlParser_completed_signal.emit((self.model_name, self.model_version_info_dict))
+        """
+        about self.model_version_info_dict
+        {'version_id': {'name': 'version_name',
+                        'creator': 'creator_name',
+                        'image_url': ['url1',
+                                      'url2',
+                                      ...
+                                     ],
+                        'file': {'file_id': {'name': 'file_name',
+                                             'info': 'like (fp16-full-PickleTensor)',
+                                             'url': 'file_download_url',
+                                             'size': file_size(float),
+                                             'is_default': True|False(bool),
+                                             },
+                                  ...
+                                 }
+                        },
+         ...
+        }
+        """
 
-    def construct_model_version_info_dict(self, version_id, version_name, creator_name) -> None:
+    def get_version_file_info_dict(self, version_info_data: dict) -> dict:
+        """
+        :param version_info_data:
+        :return:
+        """
+        file_info_dict = {}
+        for file in version_info_data['files']:
+            file_id = str(file['id'])
+            file_data = {
+                'name': file['name'],
+                'info': '-'.join(file['metadata'].values()),
+                'url': file['downloadUrl'],
+                'size': file['sizeKB'],
+                'is_default': file.get('primary', False),
+            }
+            file_info_dict[file_id] = file_data
+
+        return file_info_dict
+
+    def construct_model_version_info_dict(self, version_id, version_name, creator_name, file_info_dict) -> None:
         """
         Construct self.model_version_info_dict
         :param version_id:
         :param version_name:
         :param creator_name:
+        :param file_info_dict:
         :return:
         """
         self.model_version_info_dict[version_id] = {
             'name': version_name,
             'creator': creator_name,
             'image_url': [],
+            'file': file_info_dict,
         }
         self.get_image_url(version_id, creator_name)
 
