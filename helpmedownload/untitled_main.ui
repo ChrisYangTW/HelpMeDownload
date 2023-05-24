@@ -14,7 +14,7 @@
    <string>Help Me Download (just for Civit)</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <layout class="QVBoxLayout" name="verticalLayout" stretch="1,1,2,1,2">
+   <layout class="QVBoxLayout" name="verticalLayout" stretch="1,1,2,0,1,2">
     <item>
      <layout class="QHBoxLayout" name="horizontalLayout_1" stretch="1,15,1">
       <item>
@@ -69,6 +69,9 @@
     </item>
     <item>
      <widget class="QTextBrowser" name="parser_text_browser"/>
+    </item>
+    <item>
+     <layout class="QGridLayout" name="gridLayout_for_checkbox"/>
     </item>
     <item>
      <widget class="QPushButton" name="ready_to_go_push_button">

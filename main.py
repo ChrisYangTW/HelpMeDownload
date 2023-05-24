@@ -5,7 +5,8 @@ from pathlib import Path
 import httpx
 from PySide6.QtCore import QThreadPool, Qt
 from PySide6.QtGui import QTextCharFormat
-from PySide6.QtWidgets import QApplication, QMainWindow, QStyleFactory, QFileDialog, QProgressBar, QHBoxLayout, QLabel
+from PySide6.QtWidgets import QApplication, QMainWindow, QStyleFactory, QFileDialog, QProgressBar, QHBoxLayout, QLabel, \
+    QCheckBox
 
 from helpmedownload.ParserAndDownload import CivitalUrlParserRunner, CivitaImageDownloadRunner
 from helpmedownload.ShowHistoryWindow import HistoryWindow
@@ -144,6 +145,12 @@ class MainWindow(QMainWindow):
 
         self.ui.parse_push_button.setEnabled(True)
         self.ui.choose_folder_button.setEnabled(True)
+        self.add_checkbox_option()
+
+    def add_checkbox_option(self):
+        # test function
+        checkbox = QCheckBox('box')
+        self.ui.gridLayout_for_checkbox.addWidget(checkbox, self.ui.gridLayout_for_checkbox.count(), 0)
 
     def click_ready_to_go_button(self):
         """
