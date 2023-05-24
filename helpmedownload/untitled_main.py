@@ -16,10 +16,10 @@ from PySide6.QtGui import (QAction, QBrush, QColor, QConicalGradient,
     QIcon, QImage, QKeySequence, QLinearGradient,
     QPainter, QPalette, QPixmap, QRadialGradient,
     QTransform)
-from PySide6.QtWidgets import (QApplication, QHBoxLayout, QLabel, QLineEdit,
-    QMainWindow, QMenu, QMenuBar, QPushButton,
-    QSizePolicy, QStatusBar, QTextBrowser, QVBoxLayout,
-    QWidget)
+from PySide6.QtWidgets import (QApplication, QGridLayout, QHBoxLayout, QLabel,
+    QLineEdit, QMainWindow, QMenu, QMenuBar,
+    QPushButton, QSizePolicy, QStatusBar, QTextBrowser,
+    QVBoxLayout, QWidget)
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
@@ -88,6 +88,11 @@ class Ui_MainWindow(object):
 
         self.verticalLayout.addWidget(self.parser_text_browser)
 
+        self.gridLayout_for_checkbox = QGridLayout()
+        self.gridLayout_for_checkbox.setObjectName(u"gridLayout_for_checkbox")
+
+        self.verticalLayout.addLayout(self.gridLayout_for_checkbox)
+
         self.ready_to_go_push_button = QPushButton(self.centralwidget)
         self.ready_to_go_push_button.setObjectName(u"ready_to_go_push_button")
 
@@ -101,8 +106,8 @@ class Ui_MainWindow(object):
         self.verticalLayout.setStretch(0, 1)
         self.verticalLayout.setStretch(1, 1)
         self.verticalLayout.setStretch(2, 2)
-        self.verticalLayout.setStretch(3, 1)
-        self.verticalLayout.setStretch(4, 2)
+        self.verticalLayout.setStretch(4, 1)
+        self.verticalLayout.setStretch(5, 2)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")

@@ -68,7 +68,7 @@ class CivitalUrlParserRunner(QRunnable):
             m_id, v_id = match['model_id'], match['model_version_id']
             self.signals.UrlParser_status_signal.emit((m_id, v_id, status, error_message))
             return m_id, v_id, status
-        elif match := re.search(r'models/(?P<model_id>\d{4,5})/', url):
+        elif match := re.search(r'models/(?P<model_id>\d{4,5})/?', url):
             m_id = match['model_id']
             self.signals.UrlParser_status_signal.emit((m_id, None, status, error_message))
             return m_id, None, status
