@@ -16,7 +16,7 @@
   <widget class="QWidget" name="centralwidget">
    <layout class="QVBoxLayout" name="verticalLayout" stretch="1,1,2,0,1,2">
     <item>
-     <layout class="QHBoxLayout" name="horizontalLayout_1" stretch="1,15,1">
+     <layout class="QHBoxLayout" name="horizontalLayout_1" stretch="2,15,2">
       <item>
        <widget class="QLabel" name="folder_label">
         <property name="text">
@@ -44,7 +44,7 @@
      </layout>
     </item>
     <item>
-     <layout class="QHBoxLayout" name="horizontalLayout_2" stretch="1,15,1">
+     <layout class="QHBoxLayout" name="horizontalLayout_2" stretch="2,2,15,2">
       <item>
        <widget class="QLabel" name="url_label">
         <property name="text">
@@ -52,6 +52,13 @@
         </property>
         <property name="alignment">
          <set>Qt::AlignCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="batch_push_button">
+        <property name="text">
+         <string>Batch</string>
         </property>
        </widget>
       </item>

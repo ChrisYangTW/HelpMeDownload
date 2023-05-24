@@ -53,9 +53,9 @@ class Ui_MainWindow(object):
 
         self.horizontalLayout_1.addWidget(self.choose_folder_button)
 
-        self.horizontalLayout_1.setStretch(0, 1)
+        self.horizontalLayout_1.setStretch(0, 2)
         self.horizontalLayout_1.setStretch(1, 15)
-        self.horizontalLayout_1.setStretch(2, 1)
+        self.horizontalLayout_1.setStretch(2, 2)
 
         self.verticalLayout.addLayout(self.horizontalLayout_1)
 
@@ -67,6 +67,11 @@ class Ui_MainWindow(object):
 
         self.horizontalLayout_2.addWidget(self.url_label)
 
+        self.batch_push_button = QPushButton(self.centralwidget)
+        self.batch_push_button.setObjectName(u"batch_push_button")
+
+        self.horizontalLayout_2.addWidget(self.batch_push_button)
+
         self.url_line_edit = QLineEdit(self.centralwidget)
         self.url_line_edit.setObjectName(u"url_line_edit")
 
@@ -77,9 +82,10 @@ class Ui_MainWindow(object):
 
         self.horizontalLayout_2.addWidget(self.parse_push_button)
 
-        self.horizontalLayout_2.setStretch(0, 1)
-        self.horizontalLayout_2.setStretch(1, 15)
-        self.horizontalLayout_2.setStretch(2, 1)
+        self.horizontalLayout_2.setStretch(0, 2)
+        self.horizontalLayout_2.setStretch(1, 2)
+        self.horizontalLayout_2.setStretch(2, 15)
+        self.horizontalLayout_2.setStretch(3, 2)
 
         self.verticalLayout.addLayout(self.horizontalLayout_2)
 
@@ -135,6 +141,7 @@ class Ui_MainWindow(object):
         self.folder_label.setText(QCoreApplication.translate("MainWindow", u"Folder", None))
         self.choose_folder_button.setText(QCoreApplication.translate("MainWindow", u"Folder", None))
         self.url_label.setText(QCoreApplication.translate("MainWindow", u"Url", None))
+        self.batch_push_button.setText(QCoreApplication.translate("MainWindow", u"Batch", None))
         self.parse_push_button.setText(QCoreApplication.translate("MainWindow", u"Parse", None))
         self.ready_to_go_push_button.setText(QCoreApplication.translate("MainWindow", u"Ready To Go", None))
         self.menuhelp.setTitle(QCoreApplication.translate("MainWindow", u"Show", None))

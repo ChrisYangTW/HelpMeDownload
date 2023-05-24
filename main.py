@@ -10,6 +10,7 @@ from PySide6.QtWidgets import QApplication, QMainWindow, QStyleFactory, QFileDia
 
 from helpmedownload.ParserAndDownload import CivitalUrlParserRunner, CivitaImageDownloadRunner
 from helpmedownload.ShowHistoryWindow import HistoryWindow
+from helpmedownload.LoadUrlsWindow import LoadingUrlsWindow
 from helpmedownload.untitled_main import Ui_MainWindow
 
 
@@ -38,6 +39,7 @@ class MainWindow(QMainWindow):
             special=True
         ))
         self.ui.choose_folder_button.clicked.connect(self.click_choose_folder_button)
+        self.ui.batch_push_button.clicked.connect(self.chick_batch_button)
         self.ui.parse_push_button.clicked.connect(self.click_parse_button)
         self.ui.ready_to_go_push_button.clicked.connect(self.click_ready_to_go_button)
 
@@ -67,6 +69,15 @@ class MainWindow(QMainWindow):
         folder = QFileDialog.getExistingDirectory(self, "Select Folder", options=options)
         self.ui.folder_line_edit.setText(folder)
         self.save_dir = Path(folder)
+
+    def chick_batch_button(self):
+        """
+        Pop up a QDialog window for handling bulk urls
+        :return:
+        """
+        load_urls_window = LoadingUrlsWindow(parent=self)
+        load_urls_window.setWindowModality(Qt.ApplicationModal)
+        load_urls_window.show()
 
     def click_parse_button(self) -> None:
         """
