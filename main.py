@@ -143,7 +143,7 @@ class MainWindow(QMainWindow):
 
         self.ui.parse_push_button.setEnabled(True)
         self.ui.choose_folder_button.setEnabled(True)
-        self.add_checkbox_option()
+        # self.add_checkbox_option()
 
     def add_checkbox_option(self):
         # test function
