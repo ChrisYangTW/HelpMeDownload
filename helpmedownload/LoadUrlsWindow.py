@@ -1,4 +1,6 @@
 import re
+
+from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (QDialog, QVBoxLayout, QPushButton, QWidget, QTextBrowser,
                                QHBoxLayout, QTextEdit, QSizePolicy, QMessageBox, QFileDialog)
 
@@ -7,6 +9,8 @@ class LoadingUrlsWindow(QDialog):
     """
     QDialog window for loading Urls
     """
+    loading_urls_success_signal = Signal(list)
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.initUI()
@@ -83,7 +87,17 @@ class LoadingUrlsWindow(QDialog):
         # pattern = re.compile(r'https://civitai[.]com/models/\d{4,5}(?:/.*)?|(?:[?]modelVersionId=\d{4,5})')
         pattern = re.compile(r'https://civitai\.com/models/\d+(\/[\w-]+)?(\?modelVersionId=\d+)?$')
         match_error_url_list = [url for url in url_list if not pattern.match(url)]
-        print(match_error_url_list)
+
+        if not match_error_url_list:
+            result = QMessageBox.question(self, 'Confirmation', 'All urls are legal, start to download?',
+                                          QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+            if result == QMessageBox.Yes:
+                print('click ok')
+                self.loading_urls_success_signal.emit(url_list)
+            else:
+                print('cancel')
+
+        self.check_message.clear()
         for error_url in match_error_url_list:
             self.check_message.append(f'{error_url}')
 

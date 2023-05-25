@@ -76,8 +76,14 @@ class MainWindow(QMainWindow):
         :return:
         """
         load_urls_window = LoadingUrlsWindow(parent=self)
+        load_urls_window.loading_urls_success_signal.connect(self.handle_loading_urls_success_signal)
         load_urls_window.setWindowModality(Qt.ApplicationModal)
         load_urls_window.show()
+
+    def handle_loading_urls_success_signal(self, model_urls_list: list):
+        self.ui.parse_push_button.setEnabled(False)
+        self.ui.choose_folder_button.setEnabled(False)
+
 
     def click_parse_button(self) -> None:
         """
