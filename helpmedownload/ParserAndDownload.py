@@ -40,16 +40,15 @@ class CivitalUrlParserRunner(QRunnable):
     @Slot()
     def run(self) -> None:
         self.signals.UrlParser_started_signal.emit(f'Start to parse: {self.url}')
-        if parser_result := self.get_model_and_version_and_status(self.url, self.test_mode):
+        if parser_result := self.get_model_and_version_and_status(test_mode=self.test_mode):
             # test_mode, parser failed, connection failed, none of them continue
             if parser_result[-1]:
                 self.get_model_version_info(*parser_result[:-1])
 
-    def get_model_and_version_and_status(self, url: str = '', test_mode: bool = False) -> tuple | bool:
+    def get_model_and_version_and_status(self, test_mode: bool = False) -> tuple | bool:
         """
         Get the analysis result and connection status of the URL, and emit the information (M_ID, V_ID, status)
         to main thread
-        :param url:
         :param test_mode: set to True, only the URL will be parsed without attempting to connect and obtain information
         :return:
         """
@@ -59,21 +58,22 @@ class CivitalUrlParserRunner(QRunnable):
             status = None
         else:
             try:
-                status = self.httpx_client.get(url).status_code == httpx.codes.OK
+                status = self.httpx_client.get(self.url).status_code == httpx.codes.OK
             except (httpx.TimeoutException, httpx.RequestError, httpx.ReadTimeout) as e:
                 error_message = e
                 status = False
 
-        if match := re.search(r'models/(?P<model_id>\d{4,5})[?]modelVersionId=(?P<model_version_id>\d{4,5})', url):
+        if match := re.search(r'models/(?P<model_id>\d{4,5})[?]modelVersionId=(?P<model_version_id>\d{4,5})', self.url):
             m_id, v_id = match['model_id'], match['model_version_id']
-            self.signals.UrlParser_status_signal.emit((m_id, v_id, status, error_message))
+            self.signals.UrlParser_status_signal.emit((m_id, v_id, status, error_message, self.url))
             return m_id, v_id, status
-        elif match := re.search(r'models/(?P<model_id>\d{4,5})/?', url):
+        elif match := re.search(r'models/(?P<model_id>\d{4,5})/?', self.url):
             m_id = match['model_id']
-            self.signals.UrlParser_status_signal.emit((m_id, None, status, error_message))
+            self.signals.UrlParser_status_signal.emit((m_id, None, status, error_message, self.url))
             return m_id, None, status
         else:
-            self.signals.UrlParser_status_signal.emit((None, None, False, error_message))  # parse fails, set the status to false
+            # parse fails, set the status to false
+            self.signals.UrlParser_status_signal.emit((None, None, False, error_message, self.url))
             return False
 
     def get_model_version_info(self, model_id: str = '', model_version_id: str = '') -> None:
@@ -142,7 +142,7 @@ class CivitalUrlParserRunner(QRunnable):
             file_id = str(file['id'])
             file_data = {
                 'name': file['name'],
-                'info': '-'.join(file['metadata'].values()),
+                'info': '-'.join(str(file['metadata'].values())),
                 'url': file['downloadUrl'],
                 'size': file['sizeKB'],
                 'is_default': file.get('primary', False),

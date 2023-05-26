@@ -5,14 +5,15 @@ from PySide6.QtWidgets import (QDialog, QVBoxLayout, QPushButton, QWidget, QText
                                QHBoxLayout, QTextEdit, QSizePolicy, QMessageBox, QFileDialog)
 
 
-class LoadingUrlsWindow(QDialog):
+class LoadingBatchUrlsWindow(QDialog):
     """
-    QDialog window for loading Urls
+    QDialog window for loading batch Urls
     """
-    loading_urls_success_signal = Signal(list)
+    loading_batch_urls_signal = Signal(list)
 
-    def __init__(self, parent=None):
+    def __init__(self, batch_url_list: list = None, parent=None):
         super().__init__(parent)
+        self.batch_url_list = batch_url_list
         self.initUI()
 
     def initUI(self):
@@ -21,6 +22,8 @@ class LoadingUrlsWindow(QDialog):
 
         self.v_layout = QVBoxLayout(self)
         self.urls_editor = QTextEdit(self)
+        for url in self.batch_url_list:
+            self.urls_editor.append(url)
         self.v_layout.addWidget(self.urls_editor)
 
         self.check_message = QTextBrowser()
@@ -38,7 +41,7 @@ class LoadingUrlsWindow(QDialog):
         self.load_button = QPushButton('Load', self)
         self.load_button.setStyleSheet("background-color: rgb(50, 195, 50)")
         self.load_button.setAutoDefault(False)
-        self.confirm_button = QPushButton('Comfort', self)
+        self.confirm_button = QPushButton('Confirm', self)
         self.confirm_button.setStyleSheet("background-color: rgb(50, 50, 195)")
         self.confirm_button.setAutoDefault(False)
 
@@ -61,7 +64,11 @@ class LoadingUrlsWindow(QDialog):
             self.move(center_point.x() - self.width() / 2, center_point.y() - self.height() / 2)
 
     # Overrides the reject() to allow users to cancel the dialog using the ESC key
-    def reject(self):
+    def reject(self, call_from_confirm_button: bool = False):
+        if call_from_confirm_button:
+            self.done(0)
+            return
+
         if text := self.urls_editor.toPlainText():
             result = QMessageBox.question(self, 'Confirmation', 'Are you sure to cancel ?',
                                           QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
@@ -89,13 +96,9 @@ class LoadingUrlsWindow(QDialog):
         match_error_url_list = [url for url in url_list if not pattern.match(url)]
 
         if not match_error_url_list:
-            result = QMessageBox.question(self, 'Confirmation', 'All urls are legal, start to download?',
-                                          QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
-            if result == QMessageBox.Yes:
-                print('click ok')
-                self.loading_urls_success_signal.emit(url_list)
-            else:
-                print('cancel')
+            self.loading_batch_urls_signal.emit(url_list)
+            self.reject(call_from_confirm_button=True)
+            return
 
         self.check_message.clear()
         for error_url in match_error_url_list:
@@ -124,7 +127,7 @@ if __name__ == '__main__':
             self.v_layout.addWidget(self.button)
 
         def show_window(self):
-            history_window = LoadingUrlsWindow(parent=self)
+            history_window = LoadingBatchUrlsWindow(parent=self)
             history_window.setWindowModality(Qt.ApplicationModal)
             history_window.show()
 

@@ -77,10 +77,10 @@ class Ui_MainWindow(object):
 
         self.horizontalLayout_2.addWidget(self.url_line_edit)
 
-        self.parse_push_button = QPushButton(self.centralwidget)
-        self.parse_push_button.setObjectName(u"parse_push_button")
+        self.go_push_button = QPushButton(self.centralwidget)
+        self.go_push_button.setObjectName(u"go_push_button")
 
-        self.horizontalLayout_2.addWidget(self.parse_push_button)
+        self.horizontalLayout_2.addWidget(self.go_push_button)
 
         self.horizontalLayout_2.setStretch(0, 2)
         self.horizontalLayout_2.setStretch(1, 2)
@@ -142,7 +142,7 @@ class Ui_MainWindow(object):
         self.choose_folder_button.setText(QCoreApplication.translate("MainWindow", u"Folder", None))
         self.url_label.setText(QCoreApplication.translate("MainWindow", u"Url", None))
         self.batch_push_button.setText(QCoreApplication.translate("MainWindow", u"Batch", None))
-        self.parse_push_button.setText(QCoreApplication.translate("MainWindow", u"Parse", None))
+        self.go_push_button.setText(QCoreApplication.translate("MainWindow", u"Go", None))
         self.ready_to_go_push_button.setText(QCoreApplication.translate("MainWindow", u"Ready To Go", None))
         self.menuhelp.setTitle(QCoreApplication.translate("MainWindow", u"Show", None))
     # retranslateUi

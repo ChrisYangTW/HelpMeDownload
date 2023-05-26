@@ -66,9 +66,9 @@
        <widget class="QLineEdit" name="url_line_edit"/>
       </item>
       <item>
-       <widget class="QPushButton" name="parse_push_button">
+       <widget class="QPushButton" name="go_push_button">
         <property name="text">
-         <string>Parse</string>
+         <string>Go</string>
         </property>
        </widget>
       </item>
