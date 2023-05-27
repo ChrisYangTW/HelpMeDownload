@@ -75,7 +75,7 @@
      </layout>
     </item>
     <item>
-     <widget class="QTextBrowser" name="parser_text_browser"/>
+     <widget class="QTextBrowser" name="operation_text_browser"/>
     </item>
     <item>
      <layout class="QGridLayout" name="gridLayout_for_checkbox"/>

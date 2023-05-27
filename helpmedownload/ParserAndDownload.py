@@ -10,8 +10,8 @@ class CivitalUrlParserRunnerSignals(QObject):
     Signals for CivitalUrlParserRunner class
     """
     UrlParser_started_signal = Signal(str)
-    UrlParser_status_signal = Signal(tuple)
-    UrlParser_connect_failed_signal = Signal(str)
+    UrlParser_preliminary_signal = Signal(tuple)
+    UrlParser_connect_to_api_failed_signal = Signal(str)
     UrlParser_completed_signal = Signal(tuple)
 
 
@@ -39,13 +39,13 @@ class CivitalUrlParserRunner(QRunnable):
 
     @Slot()
     def run(self) -> None:
-        self.signals.UrlParser_started_signal.emit(f'Start to parse: {self.url}')
-        if parser_result := self.get_model_and_version_and_status(test_mode=self.test_mode):
-            # test_mode, parser failed, connection failed, none of them continue
-            if parser_result[-1]:
-                self.get_model_version_info(*parser_result[:-1])
+        self.signals.UrlParser_started_signal.emit(f'{self.url} | Start to parse ...')
+        parser_result = self.get_model_id_and_version_id_and_status(test_mode=self.test_mode)
+        # test mode, parse failed, connection failed, none of them continue
+        if parser_result[-1]:
+            self.get_model_version_info(*parser_result[:-1])
 
-    def get_model_and_version_and_status(self, test_mode: bool = False) -> tuple | bool:
+    def get_model_id_and_version_id_and_status(self, test_mode: bool = False) -> tuple:
         """
         Get the analysis result and connection status of the URL, and emit the information (M_ID, V_ID, status)
         to main thread
@@ -63,18 +63,18 @@ class CivitalUrlParserRunner(QRunnable):
                 error_message = e
                 status = False
 
-        if match := re.search(r'models/(?P<model_id>\d{4,5})[?]modelVersionId=(?P<model_version_id>\d{4,5})', self.url):
+        if match := re.search(r'models/(?P<model_id>\d{4,6})[?]modelVersionId=(?P<model_version_id>\d{4,6})', self.url):
             m_id, v_id = match['model_id'], match['model_version_id']
-            self.signals.UrlParser_status_signal.emit((m_id, v_id, status, error_message, self.url))
+            self.signals.UrlParser_preliminary_signal.emit((m_id, v_id, status, error_message, self.url))
             return m_id, v_id, status
-        elif match := re.search(r'models/(?P<model_id>\d{4,5})/?', self.url):
+        elif match := re.search(r'models/(?P<model_id>\d{4,6})/?', self.url):
             m_id = match['model_id']
-            self.signals.UrlParser_status_signal.emit((m_id, None, status, error_message, self.url))
+            self.signals.UrlParser_preliminary_signal.emit((m_id, None, status, error_message, self.url))
             return m_id, None, status
         else:
             # parse fails, set the status to false
-            self.signals.UrlParser_status_signal.emit((None, None, False, error_message, self.url))
-            return False
+            self.signals.UrlParser_preliminary_signal.emit((None, None, False, error_message, self.url))
+            return None, None, False
 
     def get_model_version_info(self, model_id: str = '', model_version_id: str = '') -> None:
         """
@@ -88,7 +88,8 @@ class CivitalUrlParserRunner(QRunnable):
             response = self.httpx_client.get(self.civitai_models_api_url + model_id)
         except (httpx.TimeoutException, httpx.RequestError, httpx.ReadTimeout) as e:
             print(e)
-            self.signals.UrlParser_connect_failed_signal.emit('Connect failed [@get_model_version_info].')
+            self.signals.UrlParser_connect_to_api_failed_signal.emit(f'{self.url } Connect to api failed. '
+                                                                     f'Try again later.')
             return
 
         if response.status_code == httpx.codes.OK:
@@ -110,7 +111,7 @@ class CivitalUrlParserRunner(QRunnable):
 
                 self.construct_model_version_info_dict(version_id, version_name, creator_name, file_info_dict)
 
-        self.signals.UrlParser_completed_signal.emit((self.model_name, self.model_version_info_dict))
+        self.signals.UrlParser_completed_signal.emit((self.model_name, self.model_version_info_dict, self.url))
         """
         about self.model_version_info_dict
         {'version_id': {'name': 'version_name',
@@ -182,7 +183,7 @@ class CivitalUrlParserRunner(QRunnable):
             response = self.httpx_client.get(self.civitai_image_api_url, params=params)
         except (httpx.TimeoutException, httpx.RequestError, httpx.ReadTimeout) as e:
             print(e)
-            self.signals.UrlParser_connect_failed_signal.emit('Connect failed [@get_image_url].')
+            self.signals.UrlParser_connect_to_api_failed_signal.emit('Connect failed [@get_image_url].')
             return
 
         if response.status_code == 200:

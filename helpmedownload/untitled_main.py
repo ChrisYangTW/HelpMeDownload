@@ -89,10 +89,10 @@ class Ui_MainWindow(object):
 
         self.verticalLayout.addLayout(self.horizontalLayout_2)
 
-        self.parser_text_browser = QTextBrowser(self.centralwidget)
-        self.parser_text_browser.setObjectName(u"parser_text_browser")
+        self.operation_text_browser = QTextBrowser(self.centralwidget)
+        self.operation_text_browser.setObjectName(u"operation_text_browser")
 
-        self.verticalLayout.addWidget(self.parser_text_browser)
+        self.verticalLayout.addWidget(self.operation_text_browser)
 
         self.gridLayout_for_checkbox = QGridLayout()
         self.gridLayout_for_checkbox.setObjectName(u"gridLayout_for_checkbox")

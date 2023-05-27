@@ -101,57 +101,66 @@ class MainWindow(QMainWindow):
 
         civital_url_parser = CivitalUrlParserRunner(url, self.httpx_client)
         civital_url_parser.signals.UrlParser_started_signal.connect(self.handle_parser_started_signal)
-        civital_url_parser.signals.UrlParser_status_signal.connect(self.handle_parser_status_signal)
-        civital_url_parser.signals.UrlParser_connect_failed_signal.connect(self.handle_parser_connect_failed_signal)
+        civital_url_parser.signals.UrlParser_preliminary_signal.connect(self.handle_parser_preliminary_signal)
+        civital_url_parser.signals.UrlParser_connect_to_api_failed_signal.connect(
+            self.handle_parser_connect_to_api_failed_signal)
         civital_url_parser.signals.UrlParser_completed_signal.connect(self.handle_parser_completed_signal)
 
         self.pool.start(civital_url_parser)
 
-    def handle_parser_started_signal(self, started_message: str):
-        self.ui.parser_text_browser.append(started_message)
+    def handle_parser_started_signal(self, started_message: str) -> None:
+        """
+        Display the string message received from UrlParser_started_signal in the operation_text_browser
+        :param started_message:
+        :return:
+        """
+        self.ui.operation_text_browser.append(started_message)
 
-    def handle_parser_status_signal(self, model_and_version_and_status: tuple):
+    def handle_parser_preliminary_signal(self, model_id_and_version_id_and_status: tuple) -> None:
         """
         Display the corresponding content based on the contents of "model_and_version_and_status"
+        in the operation_text_browser
+        :param model_id_and_version_id_and_status:
+        :return:
         """
-        self.model_and_version_id = model_and_version_and_status[:2]
-        status, error_message, url = model_and_version_and_status[2:]
+        self.model_and_version_id = model_id_and_version_id_and_status[:2]
+        status, error_message, url = model_id_and_version_id_and_status[2:]
 
         match status:
-            case None:
-                self.text_browser_insert_html(
+            case None:  # parser test mode
+                self.operation_browser_insert_html(
                     f'<span style="color: green;">Test mode: {self.model_and_version_id= }</span><br>'
                 )
                 self.able_buttons_and_edit()
-            case False:
+            case False:  # parse failed or connection failed
                 if self.model_and_version_id == (None, None):
-                    self.text_browser_insert_html(
-                        f'<span style="color: pink;">URL parse failed. {error_message}</span><br>'
+                    self.operation_browser_insert_html(
+                        f'<span style="color: pink;">{url} | parse failed. {error_message}</span><br>'
                     )
                 else:
-                    self.ui.parser_text_browser.append(
+                    self.ui.operation_text_browser.append(
                         f'{url} parse success [{str(self.model_and_version_id)}], '
                         f'but connect to URL fail. {error_message}'
                     )
-                    self.ui.parser_text_browser.append('')
+                    self.ui.operation_text_browser.append('')
                     self.ui.statusbar.showMessage('Connect to URL fail.', 3000)
-                self.text_browser_insert_html(
-                    '<span style="color: pink;">Try it again later</span><br>'
+                self.operation_browser_insert_html(
+                    '<span style="color: pink;">Confirm the url and try again.</span><br>', newline_first=False
                 )
                 self.able_buttons_and_edit()
             case _:
-                self.ui.parser_text_browser.append(f'{url} parse success [{str(self.model_and_version_id)}]')
+                self.ui.operation_text_browser.append(f'{url} | parse success [{str(self.model_and_version_id)}]')
 
-    def handle_parser_connect_failed_signal(self, failed_message: str):
-        self.ui.parser_text_browser.insertHtml(
-            f'<br><span style="color: pink;">{failed_message}</span><br>'
+    def handle_parser_connect_to_api_failed_signal(self, failed_message: str) -> None:
+        """
+        Display the string message received from UrlParser_connect_to_api_failed_signal in the operation_text_browser
+        :param failed_message:
+        :return:
+        """
+        self.operation_browser_insert_html(
+            f'<span style="color: pink;">{failed_message}</span><br>'
         )
-        self.text_browser_insert_html(
-            '<span style="color: pink;">Try it again later</span><br>'
-        )
-        self.ui.url_line_edit.setEnabled(True)
-        self.ui.go_push_button.setEnabled(True)
-        self.ui.choose_folder_button.setEnabled(True)
+        self.able_buttons_and_edit()
 
     def handle_parser_completed_signal(self, info: tuple) -> None:
         """
@@ -160,9 +169,18 @@ class MainWindow(QMainWindow):
         :param info:
         :return:
         """
-        self.model_name, self.model_version_info_dict = info
-        self.ui.parser_text_browser.append('Preparation complete. Start the download')
-        self.ui.parser_text_browser.append('')
+        self.model_name, self.model_version_info_dict, url = info
+
+        if not self.model_version_info_dict:
+            self.operation_browser_insert_html(
+                f'<span style="color: pink;">{url} | Unable to retrieve content from the API. '
+                f'Please check the URL.</span><br>'
+            )
+            self.able_buttons_and_edit()
+            return
+
+        self.ui.operation_text_browser.append(f'{url} | Preparation complete. Start to download')
+        self.ui.operation_text_browser.append('')
 
         self.start_to_download()
         # self.add_checkbox_option()  #  not implemented
@@ -277,10 +295,11 @@ class MainWindow(QMainWindow):
                 )
             self.able_buttons_and_edit()
 
-    def text_browser_insert_html(self, html_string: str):
-        self.ui.parser_text_browser.append('')
-        self.ui.parser_text_browser.insertHtml(html_string)
-        self.ui.parser_text_browser.setCurrentCharFormat(QTextCharFormat())
+    def operation_browser_insert_html(self, html_string: str, newline_first: bool = True):
+        if newline_first:
+            self.ui.operation_text_browser.append('')
+        self.ui.operation_text_browser.insertHtml(html_string)
+        self.ui.operation_text_browser.setCurrentCharFormat(QTextCharFormat())
 
     @staticmethod
     def convert_failed_urls_dict_to_list(download_fail_url_dict: dict) -> list:
