@@ -5,7 +5,7 @@ class HistoryWindow(QDialog):
     """
     QDialog window for show history
     """
-    def __init__(self, history: list = None, special: bool = False,parent=None):
+    def __init__(self, history: list = None, special: bool = False, parent=None):
         super().__init__(parent)
         self.setWindowTitle('History')
         self.setGeometry(100, 100, 600, 400)

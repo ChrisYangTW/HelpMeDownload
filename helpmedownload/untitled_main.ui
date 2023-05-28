@@ -14,9 +14,9 @@
    <string>Help Me Download (just for Civit)</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <layout class="QVBoxLayout" name="verticalLayout" stretch="1,1,2,0,1,2">
+   <layout class="QVBoxLayout" name="verticalLayout" stretch="1,1,2,0,0,2">
     <item>
-     <layout class="QHBoxLayout" name="horizontalLayout_1" stretch="1,15,1">
+     <layout class="QHBoxLayout" name="horizontalLayout_1" stretch="2,14,2">
       <item>
        <widget class="QLabel" name="folder_label">
         <property name="text">
@@ -44,11 +44,11 @@
      </layout>
     </item>
     <item>
-     <layout class="QHBoxLayout" name="horizontalLayout_2" stretch="1,15,1">
+     <layout class="QHBoxLayout" name="horizontalLayout_2" stretch="2,2,12,2">
       <item>
        <widget class="QLabel" name="url_label">
         <property name="text">
-         <string>Url</string>
+         <string>URL</string>
         </property>
         <property name="alignment">
          <set>Qt::AlignCenter</set>
@@ -56,27 +56,37 @@
        </widget>
       </item>
       <item>
+       <widget class="QPushButton" name="batch_push_button">
+        <property name="text">
+         <string>Batch</string>
+        </property>
+       </widget>
+      </item>
+      <item>
        <widget class="QLineEdit" name="url_line_edit"/>
       </item>
       <item>
-       <widget class="QPushButton" name="parse_push_button">
+       <widget class="QPushButton" name="go_push_button">
         <property name="text">
-         <string>Parse</string>
+         <string>Go</string>
         </property>
        </widget>
       </item>
      </layout>
     </item>
     <item>
-     <widget class="QTextBrowser" name="parser_text_browser"/>
+     <widget class="QTextBrowser" name="operation_text_browser"/>
     </item>
     <item>
      <layout class="QGridLayout" name="gridLayout_for_checkbox"/>
     </item>
     <item>
-     <widget class="QPushButton" name="ready_to_go_push_button">
+     <widget class="QLabel" name="label">
       <property name="text">
-       <string>Ready To Go</string>
+       <string>Download task message</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignCenter</set>
       </property>
      </widget>
     </item>

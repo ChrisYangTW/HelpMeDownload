@@ -1,7 +1,7 @@
-# Help Me Download (v0.1.0)
+# Help Me Download (v0.1.1)
 Used to download sample images provided by various model creators on civitai.com.
 
-![sample1](examples/sample1_v0_1_0.png)
+![sample1](examples/sample1_v0_1_1.png)
 
 ## Installation
 Use the git clone command to clone the repository.
@@ -22,25 +22,36 @@ python3 main.py
 You can use pyinstaller, py2app, py2exe to convert the code into an executable file that is compatible with the system.
 
 ## Usage
-![sample2](examples/sample2_v0_1_0.png)
+![sample2](examples/sample2_v0_1_1.png)
 1. Click the "Folder" button to select the image storage path.
-2. After pasting the model URL, click the "Parse" button.
+2. Import URLs in batch or directly paste URLs. (Refer to point 4, 5)
+3. Click the "Go" button to start.
+4. About import URLs in batch. (Click the "Batch" button)
+   * ![sample3](examples/sample3_v0_1_1.png)
+   * Paste the URLs line by line.
+   * "Load from file" button is also available to import a .txt file (where each URL is listed on a separate line).
+   * Clicking "Confirm" will perform an initial validation of the URLs, and if there are no issues, the download task will be initiated.
+   * It is recommended not to exceed ten URLs at once to ensure the server responds appropriately.
+   * When using batch downloading, the completed URLs will be removed from the list. (That means the URLs that failed to connect will remain in the list for further download attempts.)
+5. About URL format.
    * Model URL. (Download images for all versions)
    * ![Url1](examples/Url1.png)
    * Individual version URL. (Download images for the specific version only)
    * ![Url2](examples/Url2.png)
-3. When parsing is completed, click the "Ready to go" button to start the download.
-4. Option:
+6. Option:
    * Show > Show History. You can view the download history.
    * Show > Show Failed URLs. You can view the failed download links (if any).
 
 ## Test environment
 ```
 Python 3.11
-Macbook Pro16 M1 (OS 13.3.1 (22E261))
+Macbook Pro16 M1 (OS Version 13.4 (22F66))
 ```
 
 ## Additional note
-The current download functionality has been tested successfully, but the UI part may still require some visual improvements.  
 The images used for demonstration purposes are sourced from the "majicmix-realistic" model on civitai.com.
 If there are any concerns or issues, please leave a comment to let us know. Thank you.
+
+## Others
+ Why are there more photos than shown in the example and why are some of them repeated?  
+ The downloaded images are obtained from the API and are the images provided by the model's author specifically for that model. The author may have uploaded multiple images, but only a few have been selected for display as examples.

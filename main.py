@@ -6,10 +6,11 @@ import httpx
 from PySide6.QtCore import QThreadPool, Qt
 from PySide6.QtGui import QTextCharFormat
 from PySide6.QtWidgets import QApplication, QMainWindow, QStyleFactory, QFileDialog, QProgressBar, QHBoxLayout, QLabel, \
-    QCheckBox
+    QCheckBox, QMessageBox
 
 from helpmedownload.ParserAndDownload import CivitalUrlParserRunner, CivitaImageDownloadRunner
 from helpmedownload.ShowHistoryWindow import HistoryWindow
+from helpmedownload.BatchUrlsWindow import LoadingBatchUrlsWindow
 from helpmedownload.untitled_main import Ui_MainWindow
 
 
@@ -18,17 +19,21 @@ class MainWindow(QMainWindow):
         super(MainWindow, self).__init__()
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
-        self.ui.ready_to_go_push_button.setEnabled(False)
 
         self.pool = QThreadPool.globalInstance()
         self.httpx_client = httpx.Client()
 
-        self.model_name = ''
+        self.batch_mode = False
+        self.batch_url_list = []
+        self.processing_batch_url_list = []
+        self.connect_failed_batch_url_list = []
+
+        self.url = ''
         self.model_and_version_id = ()
-        self.model_version_info_dict = {}
         self.save_dir = ''
         self.progress_bar_alive_list = []
         self.progress_bar_info = {}
+        self.download_failed_count_each_model = 0
         self.download_history_list = []
         self.download_failed_urls_dict = {}
 
@@ -38,12 +43,8 @@ class MainWindow(QMainWindow):
             special=True
         ))
         self.ui.choose_folder_button.clicked.connect(self.click_choose_folder_button)
-        self.ui.parse_push_button.clicked.connect(self.click_parse_button)
-        self.ui.ready_to_go_push_button.clicked.connect(self.click_ready_to_go_button)
-
-        # When url_line_edit or folder_line_edit is modified, request a re-parsing
-        self.ui.url_line_edit.textChanged.connect(lambda: self.ui.ready_to_go_push_button.setEnabled(False))
-        self.ui.folder_line_edit.textChanged.connect(lambda: self.ui.ready_to_go_push_button.setEnabled(False))
+        self.ui.batch_push_button.clicked.connect(self.chick_batch_button)
+        self.ui.go_push_button.clicked.connect(self.click_go_button)
 
     def trigger_show_action(self, history: list, special: bool = False) -> None:
         """
@@ -64,125 +65,190 @@ class MainWindow(QMainWindow):
         """
         options = QFileDialog.Options()
         options |= QFileDialog.ShowDirsOnly
-        folder = QFileDialog.getExistingDirectory(self, "Select Folder", options=options)
-        self.ui.folder_line_edit.setText(folder)
-        self.save_dir = Path(folder)
+        if folder := QFileDialog.getExistingDirectory(self, "Select Folder", options=options):
+            self.ui.folder_line_edit.setText(folder)
+            self.save_dir = Path(folder)
 
-    def click_parse_button(self) -> None:
+    def chick_batch_button(self):
         """
-        Parse the URL using QThreadPool
+        Pop up a QDialog window for handling bulk urls
         :return:
         """
-        self.ui.parse_push_button.setEnabled(False)
-        self.ui.choose_folder_button.setEnabled(False)
-        url = self.ui.url_line_edit.text()
+        if not self.save_dir:
+            QMessageBox.warning(self, 'Warning', 'Set the storage folder first')
+            return
 
-        civital_url_parser = CivitalUrlParserRunner(url, self.httpx_client)
+        load_urls_window = LoadingBatchUrlsWindow(batch_url_list=self.batch_url_list, parent=self)
+        load_urls_window.loading_batch_urls_signal.connect(self.handle_loading_batch_urls_signal)
+        load_urls_window.setWindowModality(Qt.ApplicationModal)
+        load_urls_window.show()
+
+    def handle_loading_batch_urls_signal(self, url_list: list):
+        self.batch_url_list = self.processing_batch_url_list = url_list
+        self.batch_mode = True
+        self.download_from_batch_url()
+
+    def download_from_batch_url(self):
+        try:
+            url = self.processing_batch_url_list.pop(0)
+            self.click_go_button(url_from_batch=url)
+        except IndexError:
+            self.batch_mode = False
+            self.batch_url_list = self.connect_failed_batch_url_list
+            self.connect_failed_batch_url_list.clear()
+            self.able_buttons_and_edit()
+            return
+
+
+    def click_go_button(self, url_from_batch: str = '') -> None:
+        """
+        Parse the URL and using QThreadPool
+        :return:
+        """
+        if not self.save_dir:
+            QMessageBox.warning(self, 'Warning', 'Set the storage folder first')
+            return
+
+        self.able_buttons_and_edit(enable=False)
+        self.url = url_from_batch or self.ui.url_line_edit.text()
+
+        civital_url_parser = CivitalUrlParserRunner(self.url, self.httpx_client)
         civital_url_parser.signals.UrlParser_started_signal.connect(self.handle_parser_started_signal)
-        civital_url_parser.signals.UrlParser_status_signal.connect(self.handle_parser_status_signal)
-        civital_url_parser.signals.UrlParser_connect_failed_signal.connect(self.handle_parser_connect_failed_signal)
+        civital_url_parser.signals.UrlParser_preliminary_signal.connect(self.handle_parser_preliminary_signal)
+        civital_url_parser.signals.UrlParser_connect_to_api_failed_signal.connect(
+            self.handle_parser_connect_to_api_failed_signal)
         civital_url_parser.signals.UrlParser_completed_signal.connect(self.handle_parser_completed_signal)
 
         self.pool.start(civital_url_parser)
 
-    def handle_parser_started_signal(self, started_message: str):
-        self.ui.parser_text_browser.append(started_message)
-
-    def handle_parser_status_signal(self, model_and_version_and_status: tuple):
+    def handle_parser_started_signal(self, started_message: str) -> None:
         """
-        Display the corresponding content based on the contents of "model_and_version_and_status"
-        """
-        status, error_message = model_and_version_and_status[-2:]
-        self.model_and_version_id = model_and_version_and_status[:-2]
-
-        match status:
-            case None:
-                self.text_browser_insert_html(
-                    f'<span style="color: green;">Test mode: {self.model_and_version_id= }</span><br>'
-                )
-                self.ui.parse_push_button.setEnabled(True)
-                self.ui.choose_folder_button.setEnabled(True)
-            case False:
-                if self.model_and_version_id == (None, None):
-                    self.text_browser_insert_html(
-                        f'<span style="color: pink;">URL parse failed. {error_message}</span><br>'
-                    )
-                else:
-                    self.ui.parser_text_browser.append(
-                        f'URL parse success [{str(self.model_and_version_id)}], but connect to URL fail. {error_message}'
-                    )
-                    self.ui.parser_text_browser.append('')
-                    self.ui.statusbar.showMessage('Connect to URL fail.', 3000)
-                self.ui.parse_push_button.setEnabled(True)
-                self.ui.choose_folder_button.setEnabled(True)
-            case _:
-                self.ui.parser_text_browser.append(f'URL parse success [{str(self.model_and_version_id)}]')
-
-    def handle_parser_connect_failed_signal(self, failed_message: str):
-        self.ui.parser_text_browser.insertHtml(
-            f'<br><span style="color: pink;">{failed_message}</span><br>'
-        )
-        self.ui.parse_push_button.setEnabled(True)
-        self.ui.choose_folder_button.setEnabled(True)
-
-    def handle_parser_completed_signal(self, info: tuple):
-        """
-        If the complete analysis is finished, enable the "ready_to_go" button
-        :param info:
+        Display the string message received from UrlParser_started_signal in the operation_text_browser
+        :param started_message:
         :return:
         """
-        if self.save_dir:
-            self.model_name, self.model_version_info_dict = info
-            self.ui.parser_text_browser.append('Preparation complete. Click "Ready to go" to start the download')
-            self.ui.parser_text_browser.append('')
-            self.ui.ready_to_go_push_button.setEnabled(True)
-        else:
-            self.ui.parser_text_browser.insertHtml(
-                '<br><span style="color: green;">Storage path is not set. Please configure it before parsing the URL again.</span><br>'
-            )
+        self.ui.operation_text_browser.append(started_message)
 
-        self.ui.parse_push_button.setEnabled(True)
-        self.ui.choose_folder_button.setEnabled(True)
-        # self.add_checkbox_option()
+    def handle_parser_preliminary_signal(self, model_id_and_version_id_and_status: tuple) -> None:
+        """
+        Display the corresponding content based on the contents of "model_and_version_and_status"
+        in the operation_text_browser
+        :param model_id_and_version_id_and_status:
+        :return:
+        """
+        self.model_and_version_id = model_id_and_version_id_and_status[:2]
+        status, error_message, url = model_id_and_version_id_and_status[2:]
+        assert url == self.url
+
+        match status:
+            case None:  # parser test mode
+                self.operation_browser_insert_html(
+                    f'<span style="color: green;">Test mode: {self.model_and_version_id= }</span><br>'
+                )
+                self.able_buttons_and_edit()
+            case False:  # parse failed or connection failed
+                if self.model_and_version_id == (None, None):
+                    self.operation_browser_insert_html(
+                        f'<span style="color: pink;">{url} | Parse failed. {error_message}</span><br>'
+                    )
+                else:
+                    self.ui.operation_text_browser.append(
+                        f'{url} | Parse success [{str(self.model_and_version_id)}], '
+                        f'but connection to the URL failed. {error_message}'
+                    )
+                    self.ui.statusbar.showMessage('Connection to the URL failed.', 3000)
+                self.operation_browser_insert_html(
+                    '<span style="color: pink;">Confirm the URL. '
+                    'If there are no errors, it may be due to a connection issue. Try again later</span>'
+                )
+                if not self.batch_mode:
+                    self.able_buttons_and_edit()
+                else:
+                    self.connect_failed_batch_url_list.append(url)
+                    self.download_from_batch_url()
+            case _:
+                self.ui.operation_text_browser.append(f'{url} | Parse success [{str(self.model_and_version_id)}]')
+
+    def handle_parser_connect_to_api_failed_signal(self, failed_message: tuple) -> None:
+        """
+        Display the string message received from UrlParser_connect_to_api_failed_signal in the operation_text_browser
+        :param failed_message:
+        :return:
+        """
+        message, url = failed_message
+        assert url == self.url
+
+        self.operation_browser_insert_html(
+            f'<span style="color: pink;">{message}</span><br>'
+        )
+        if not self.batch_mode:
+            self.able_buttons_and_edit()
+        else:
+            self.connect_failed_batch_url_list.append(url)
+            self.download_from_batch_url()
+
+    def handle_parser_completed_signal(self, completed_message: tuple) -> None:
+        """
+        Receive the parser_completed_signal information(the complete analysis is finished)
+        and call the start_to_download function
+        :param completed_message:
+        :return:
+        """
+        model_name, model_version_info_dict, url = completed_message
+        assert url == self.url
+
+        if not model_version_info_dict:
+            self.operation_browser_insert_html(
+                f'<span style="color: pink;">{url} | Unable to retrieve content from the API. '
+                f'Please check the URL.</span>'
+            )
+            if not self.batch_mode:
+                self.able_buttons_and_edit()
+            else:
+                self.connect_failed_batch_url_list.append(url)
+                self.download_from_batch_url()
+            return
+
+        self.ui.operation_text_browser.append(f'{url} | Preparation complete. Start to download')
+        self.start_to_download(model_name, model_version_info_dict)
+        # self.add_checkbox_option()  #  not implemented
 
     def add_checkbox_option(self):
-        # test function
+        # test function,  not implemented
         checkbox = QCheckBox('box')
         self.ui.gridLayout_for_checkbox.addWidget(checkbox, self.ui.gridLayout_for_checkbox.count(), 0)
 
-    def click_ready_to_go_button(self):
+    def start_to_download(self, model_name: str, model_version_info_dict: dict) -> None:
         """
         Start to download all images
         :return:
         """
-        self.ui.url_line_edit.setEnabled(False)
-        self.ui.parse_push_button.setEnabled(False)
-        self.ui.choose_folder_button.setEnabled(False)
-        self.ui.ready_to_go_push_button.setEnabled(False)
         self.clear_progress_bar()
+        self.download_failed_count_each_model = 0
 
-        for version_id, info in self.model_version_info_dict.items():
+        for version_id, info in model_version_info_dict.items():
+            version_name = info['name']
             image_urls = info['image_url']
-            # Skip versions that  no longer have images available
+            # Skip versions that no longer have images available
             if not image_urls:
                 continue
-            version_name = info['name']
+
             # Avoid recognizing the name as a folder during path concatenation when it contains / or \ in its name
-            fixed_model_name = self.model_name.replace('/', '_').replace('\\', '_')
-            path = self.save_dir / Path(fixed_model_name) / Path(version_name)
-            path.mkdir(parents=True, exist_ok=True)
+            fixed_model_name = model_name.replace('/', '_').replace('\\', '_')
+            dir_path = self.save_dir / Path(fixed_model_name) / Path(version_name)
+            dir_path.mkdir(parents=True, exist_ok=True)
 
             self.add_progress_bar(version_id, version_name, len(image_urls))
 
             for url in image_urls:
-                image_path = path / url.split('/')[-1]
+                image_path = dir_path / url.split('/')[-1]
                 downloader = CivitaImageDownloadRunner(version_id, version_name, url, image_path, self.httpx_client)
                 downloader.signals.Image_download_started_signal.connect(self.handle_image_download_started_signal)
                 downloader.signals.Image_download_fail_signal.connect(self.handle_image_download_failed_signal)
                 downloader.signals.Image_download_completed_signal.connect(self.handle_image_download_completed_signal)
                 self.pool.start(downloader)
 
-    def add_progress_bar(self, version_id: str, version_name: str, image_count: int):
+    def add_progress_bar(self, version_id: str, version_name: str, image_count: int) -> None:
         """
         Create a QLabel and QProgressBar (both within a QHBoxLayout)
         :param version_id:
@@ -201,9 +267,9 @@ class MainWindow(QMainWindow):
         progress_layout.setStretch(1, 5)
 
         # about progress_bar_info:
-        # {version_id: [ProgressBar widget object, Downloaded, Executed, Quantity of all images, ProgressBar Layout], ... }
+        # {version_id: [ProgressBar widget, Downloaded, Executed, Quantity of all images, ProgressBar Layout], ... }
         self.progress_bar_info[version_id] = [progress_bar, 0, 0, image_count, progress_layout]
-        self.ui.verticalLayout.addLayout(self.progress_bar_info[version_id][4])
+        self.ui.verticalLayout.addLayout(progress_layout)
 
     def handle_image_download_started_signal(self, started_message: str):
         self.download_history_list.append(f'{datetime.now().strftime("%m-%d %H:%M:%S")} : {started_message}')
@@ -211,6 +277,7 @@ class MainWindow(QMainWindow):
     def handle_image_download_failed_signal(self, fail_info: tuple):
         version_id, fail_message = fail_info
         self.progress_bar_info[version_id][2] += 1  # executed count
+        self.download_failed_count_each_model += 1
 
         # initialize self.download_failed_urls_dict
         if version_id not in self.download_failed_urls_dict:
@@ -233,28 +300,37 @@ class MainWindow(QMainWindow):
 
         self.handle_download_task(version_id)
 
-    def handle_download_task(self, version_id: str):
+    def handle_download_task(self, version_id: str) -> None:
+        """
+        Detect and handle the download progress of individual version images
+        :param version_id:
+        :return:
+        """
         version_progress_bar_info = self.progress_bar_info[version_id]
         if version_progress_bar_info[2] == version_progress_bar_info[3]:
             self.progress_bar_alive_list.remove(version_id)
 
         if not self.progress_bar_alive_list:
-            self.ui.url_line_edit.setEnabled(True)
-            self.ui.parse_push_button.setEnabled(True)
-            self.ui.choose_folder_button.setEnabled(True)
-
             self.ui.result_text_browser.append(
-                f'Download task for "{self.model_name}" has been completed. {datetime.now().strftime("%m-%d %H:%M:%S")}'
+                f'{datetime.now().strftime("%m-%d %H:%M:%S")} '
+                f'Download task for "{self.url}" has been completed.<br>'
             )
-            self.ui.result_text_browser.insertHtml(
-                '<br><span style="color: blue;">If the progress bar is not at 100%, it means there are URLs that '
-                'failed to download. Please go to Help &gt; Show Failed URLs to view them.</span><br>'
-            )
+            if self.download_failed_count_each_model:
+                self.ui.result_text_browser.insertHtml(
+                    '<span style="color: red;">'
+                    f'{self.url}: {self.download_failed_count_each_model} images failed to downloaded. '
+                    'Go to Help &gt; Show Failed URLs to view them.</span><br>'
+                )
+            if not self.batch_mode:
+                self.able_buttons_and_edit()
+            else:
+                self.download_from_batch_url()
 
-    def text_browser_insert_html(self, html_string: str):
-        self.ui.parser_text_browser.append('')
-        self.ui.parser_text_browser.insertHtml(html_string)
-        self.ui.parser_text_browser.setCurrentCharFormat(QTextCharFormat())
+    def operation_browser_insert_html(self, html_string: str, newline_first: bool = True):
+        if newline_first:
+            self.ui.operation_text_browser.append('')
+        self.ui.operation_text_browser.insertHtml(html_string)
+        self.ui.operation_text_browser.setCurrentCharFormat(QTextCharFormat())
 
     @staticmethod
     def convert_failed_urls_dict_to_list(download_fail_url_dict: dict) -> list:
@@ -264,7 +340,18 @@ class MainWindow(QMainWindow):
             download_failed_urls_list.extend(iter(fail_urls))
         return download_failed_urls_list
 
-    def clear_progress_bar(self):
+    def able_buttons_and_edit(self, enable: bool = True) -> None:
+        """
+        Enable/Disable buttons and url editor
+        :param enable:
+        :return:
+        """
+        self.ui.choose_folder_button.setEnabled(enable)
+        self.ui.batch_push_button.setEnabled(enable)
+        self.ui.url_line_edit.setEnabled(enable)
+        self.ui.go_push_button.setEnabled(enable)
+
+    def clear_progress_bar(self) -> None:
         """
         Clear all progress bar layout
         :return:
@@ -275,7 +362,7 @@ class MainWindow(QMainWindow):
                 self.clear_layout_widgets(layout)
             self.progress_bar_info.clear()
 
-    def clear_layout_widgets(self, layout):
+    def clear_layout_widgets(self, layout) -> None:
         """
         Clears all widgets within a layout, including sub-layouts.
         :param layout:
