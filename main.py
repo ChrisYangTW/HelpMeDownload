@@ -112,6 +112,13 @@ class MainWindow(QMainWindow):
         self.able_buttons_and_edit(enable=False)
         self.url = url_from_batch or self.ui.url_line_edit.text()
 
+        if not self.url:
+            self.operation_browser_insert_html(
+                '<span style="color: red;">***   No URL   ***</span>'
+            )
+            self.able_buttons_and_edit()
+            return
+
         civital_url_parser = CivitalUrlParserRunner(self.url, self.httpx_client)
         civital_url_parser.signals.UrlParser_started_signal.connect(self.handle_parser_started_signal)
         civital_url_parser.signals.UrlParser_preliminary_signal.connect(self.handle_parser_preliminary_signal)
