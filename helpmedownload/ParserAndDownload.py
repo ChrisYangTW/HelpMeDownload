@@ -1,23 +1,32 @@
 import re
 from pathlib import Path
+from dataclasses import dataclass, field
 
 import httpx
 from PySide6.QtCore import QObject, Signal, QRunnable, Slot
+
+
+@dataclass(slots=True)
+class VersionInfoData:
+    name: str
+    creator: str
+    image_urls: list = field(default_factory=list)
+    file_info: dict = field(default_factory=dict)
 
 
 class CivitalUrlParserRunnerSignals(QObject):
     """
     Signals for CivitalUrlParserRunner class
     """
-    UrlParser_started_signal = Signal(str)
+    UrlParser_Start_Signal = Signal(str)
     UrlParser_preliminary_signal = Signal(tuple)
-    UrlParser_connect_to_api_failed_signal = Signal(tuple)
-    UrlParser_completed_signal = Signal(tuple)
+    UrlParser_Fail_Signal = Signal(tuple)
+    UrlParser_Complete_Signal = Signal(tuple)
 
 
 class CivitalUrlParserRunner(QRunnable):
     """
-    Parse the URL to obtain the model name and its related information. (self.model_name, self.model_version_info_dict)
+    Parse the URL to obtain the model name and its related information. (self.model_name, self.model_version_info)
     """
     def __init__(self, url: str, httpx_client: httpx.Client, test_mode=False):
         """
@@ -26,21 +35,21 @@ class CivitalUrlParserRunner(QRunnable):
         :param test_mode: set to True, only the URL will be parsed without attempting to connect and obtain information
         """
         super().__init__()
-        self.civitai_models_api_url = r'https://civitai.com/api/v1/models/'
-        self.civitai_image_api_url = r'https://civitai.com/api/v1/images'
+        self.civitai_models_api_url: str = r'https://civitai.com/api/v1/models/'
+        self.civitai_images_api_url: str = r'https://civitai.com/api/v1/images'
 
-        self.url = url
-        self.httpx_client = httpx_client
-        self.test_mode = test_mode
+        self.url: str = url
+        self.httpx_client: httpx.Client = httpx_client
+        self.test_mode: bool = test_mode
 
         self.signals = CivitalUrlParserRunnerSignals()
 
         self.model_name = ''
-        self.model_version_info_dict = {}
+        self.model_version_info: dict = {}
 
     @Slot()
     def run(self) -> None:
-        self.signals.UrlParser_started_signal.emit(f'{self.url} | Start to parse ...')
+        self.signals.UrlParser_Start_Signal.emit(f'{self.url} | Start to parse ...')
         parser_result = self.get_model_id_and_version_id_and_status(test_mode=self.test_mode)
         # test mode, parse failed, connection failed, none of them continue
         if parser_result[-1]:
@@ -86,7 +95,7 @@ class CivitalUrlParserRunner(QRunnable):
     def get_model_version_info(self, model_id: str = '', model_version_id: str = '') -> None:
         """
         Get the information {version id: {version name, creator name, image url}} contained in the model.
-        finally, emit (self.model_name, self.model_version_info_dict) to UrlParser_completed_signal.
+        finally, emit (self.model_name, self.model_version_info) to UrlParser_Complete_Signal.
         :param model_id:
         :param model_version_id:
         :return:
@@ -95,8 +104,8 @@ class CivitalUrlParserRunner(QRunnable):
             response = self.httpx_client.get(self.civitai_models_api_url + model_id)
         except (httpx.TimeoutException, httpx.RequestError, httpx.ReadTimeout) as e:
             print(e)
-            self.signals.UrlParser_connect_to_api_failed_signal.emit(
-                (f'{self.url } | Connection to the API failed. Try again later.', self.url)
+            self.signals.UrlParser_Fail_Signal.emit(
+                (f'{self.url} | Connection to the API failed. Try again later.', self.url)
             )
             return
 
@@ -120,11 +129,11 @@ class CivitalUrlParserRunner(QRunnable):
 
                 self.construct_model_version_info_dict(version_id, version_name, creator_name, file_info_dict=None)
 
-        self.signals.UrlParser_completed_signal.emit(
-            (self.model_name, self.model_version_info_dict, self.url)
+        self.signals.UrlParser_Complete_Signal.emit(
+            (self.model_name, self.model_version_info, self.url)
         )
         """
-        about self.model_version_info_dict
+        about self.model_version_info
         {'version_id': {'name': 'version_name',
                         'creator': 'creator_name',
                         'image_url': ['url1',
@@ -167,25 +176,26 @@ class CivitalUrlParserRunner(QRunnable):
 
     def construct_model_version_info_dict(self, version_id, version_name, creator_name, file_info_dict) -> None:
         """
-        Construct self.model_version_info_dict
+        Construct self.model_version_info
         :param version_id:
         :param version_name:
         :param creator_name:
         :param file_info_dict: ****The file download feature is not implemented****
         :return:
         """
-        self.model_version_info_dict[version_id] = {
-            'name': version_name,
-            'creator': creator_name,
-            'image_url': [],
-            # 'file': file_info_dict,  todo: The file download feature is not implemented 3
-        }
+        # self.model_version_info[version_id] = {
+        #     'name': version_name,
+        #     'creator': creator_name,
+        #     'image_url': [],
+        #     # 'file': file_info_dict,  todo: The file download feature is not implemented 3
+        # }
+        self.model_version_info[version_id] = VersionInfoData(name=version_name, creator=creator_name)
         self.get_image_url(version_id, creator_name)
 
     def get_image_url(self, version_id: str, username: str) -> None:
         """
         Get the URL of the example image provided by the creator and write it to
-        self.model_version_info_dict[version_id]['image_url']
+        self.model_version_info[version_id]['image_url']
         :return:
         """
         params = {
@@ -193,10 +203,10 @@ class CivitalUrlParserRunner(QRunnable):
             'username': username,
         }
         try:
-            response = self.httpx_client.get(self.civitai_image_api_url, params=params)
+            response = self.httpx_client.get(self.civitai_images_api_url, params=params)
         except (httpx.TimeoutException, httpx.RequestError, httpx.ReadTimeout) as e:
             print(e)
-            self.signals.UrlParser_connect_to_api_failed_signal.emit(
+            self.signals.UrlParser_Fail_Signal.emit(
                 (f'{self.url} | Failed to retrieve image links. Try again later.', self.url)
             )
             return
@@ -204,8 +214,8 @@ class CivitalUrlParserRunner(QRunnable):
         if response.status_code == 200:
             image_json_data = response.json()
             for image_info in image_json_data.get('items'):
-                image_url = image_info.get('url')
-                self.model_version_info_dict[version_id]['image_url'].append(image_url)
+                url = image_info.get('url')
+                self.model_version_info[version_id].image_urls.append(url)
 
 
 class CivitaImageDownloadRunnerSignals(QObject):

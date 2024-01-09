@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'untitled_main.ui'
+## Form generated from reading UI file 'HelpMeDownload_UI.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.5.0
+## Created by: Qt User Interface Compiler version 6.6.1
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -44,7 +44,8 @@ class Ui_MainWindow(object):
 
         self.folder_line_edit = QLineEdit(self.centralwidget)
         self.folder_line_edit.setObjectName(u"folder_line_edit")
-        self.folder_line_edit.setEnabled(False)
+        self.folder_line_edit.setEnabled(True)
+        self.folder_line_edit.setReadOnly(True)
 
         self.horizontalLayout_1.addWidget(self.folder_line_edit)
 
@@ -117,7 +118,7 @@ class Ui_MainWindow(object):
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 800, 24))
+        self.menubar.setGeometry(QRect(0, 0, 800, 37))
         self.menuhelp = QMenu(self.menubar)
         self.menuhelp.setObjectName(u"menuhelp")
         MainWindow.setMenuBar(self.menubar)
