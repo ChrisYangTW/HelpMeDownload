@@ -7,7 +7,7 @@ from PySide6.QtCore import QThreadPool, Qt
 from PySide6.QtGui import QTextCharFormat, QMouseEvent
 from PySide6.QtWidgets import QMainWindow, QFileDialog, QProgressBar, QHBoxLayout, QLabel, QCheckBox, QMessageBox
 
-from helpmedownload.ParserAndDownload import CivitalUrlParserRunner, CivitaImageDownloadRunner, VersionInfoData
+from helpmedownload.ParserAndDownload import CivitaiUrlParserRunner, CivitaiImageDownloadRunner, VersionInfoData
 from helpmedownload.ShowHistoryWindow import HistoryWindow
 from helpmedownload.BatchUrlsWindow import LoadingBatchUrlsWindow
 from helpmedownload.HelpMeDownlaod_UI import Ui_MainWindow
@@ -32,13 +32,13 @@ class MainWindow(QMainWindow):
         self.httpx_client: httpx.Client = httpx.Client()
 
         self.batch_mode: bool = False
-        self.batch_url_list: list = []
+        self.batch_url: list = []
         self.processing_batch_url_list: list = []
         self.connect_failed_batch_url_list: list = []
 
         self.url: str = ''
         self.model_and_version_id: tuple = ()
-        self.save_dir: str = ''
+        self.save_dir: Path | None = None
         self.progress_bar_alive_list: list = []
         self.progress_bar_info: dict = {}
         self.download_failed_count_each_model: int = 0
@@ -50,9 +50,9 @@ class MainWindow(QMainWindow):
             history=self.convert_failed_urls_dict_to_list(self.download_failed_urls_dict),
             special=True
         ))
-        # self.ui.choose_folder_button.clicked.connect(self.click_choose_folder_button)
+        # self.ui.choose_folder_button.clicked.connect(self.select_storage_folder)
         self.ui.folder_line_edit.mousePressEvent = self.select_storage_folder
-        self.ui.batch_push_button.clicked.connect(self.chick_batch_button)
+        self.ui.batch_push_button.clicked.connect(self.click_batch_button)
         self.ui.go_push_button.clicked.connect(self.click_go_button)
 
     def trigger_show_action(self, history: list, special: bool = False) -> None:
@@ -67,17 +67,6 @@ class MainWindow(QMainWindow):
         history_window.setWindowModality(Qt.ApplicationModal)
         history_window.show()
 
-    def click_choose_folder_button(self) -> None:
-        """
-        Set the path for saving the image
-        :return:
-        """
-        options = QFileDialog.Options()
-        options |= QFileDialog.ShowDirsOnly
-        if folder := QFileDialog.getExistingDirectory(self, "Select Folder", options=options):
-            self.ui.folder_line_edit.setText(folder)
-            self.save_dir = Path(folder)
-
     def select_storage_folder(self, event: QMouseEvent) -> None:
         """
         Set the path of a folder for saving images
@@ -88,22 +77,22 @@ class MainWindow(QMainWindow):
                 self.ui.folder_line_edit.setText(folder_path)
                 self.save_dir = Path(folder_path)
 
-    def chick_batch_button(self):
+    def click_batch_button(self):
         """
-        Pop up a QDialog window for handling bulk urls
+        Pop up a QDialog window for handling batch urls
         :return:
         """
         if not self.save_dir:
             QMessageBox.warning(self, 'Warning', 'Set the storage folder first')
             return
 
-        load_urls_window = LoadingBatchUrlsWindow(batch_url_list=self.batch_url_list, parent=self)
+        load_urls_window = LoadingBatchUrlsWindow(batch_url_list=self.batch_url, parent=self)
         load_urls_window.loading_batch_urls_signal.connect(self.handle_loading_batch_urls_signal)
         load_urls_window.setWindowModality(Qt.ApplicationModal)
         load_urls_window.show()
 
     def handle_loading_batch_urls_signal(self, url_list: list):
-        self.batch_url_list = self.processing_batch_url_list = url_list
+        self.batch_url = self.processing_batch_url_list = url_list
         self.batch_mode = True
         self.download_from_batch_url()
 
@@ -113,38 +102,32 @@ class MainWindow(QMainWindow):
             self.click_go_button(url_from_batch=url)
         except IndexError:
             self.batch_mode = False
-            self.batch_url_list = self.connect_failed_batch_url_list
+            self.batch_url = self.connect_failed_batch_url_list
             self.connect_failed_batch_url_list.clear()
-            self.able_buttons_and_edit()
+            self.enable_buttons_and_edit()
             return
 
     def click_go_button(self, url_from_batch: str = '') -> None:
         """
-        Parse the URL and using QThreadPool
+        Parse the URL (using QThreadPool)
+        :param url_from_batch:
         :return:
         """
         if not self.save_dir:
             QMessageBox.warning(self, 'Warning', 'Set the storage folder first')
             return
 
-        self.able_buttons_and_edit(enable=False)
+        self.enable_buttons_and_edit(enable=False)
         self.url = url_from_batch or self.ui.url_line_edit.text().strip()
 
         if not self.url:
             self.operation_browser_insert_html(
-                '<span style="color: red;">***   No URL   ***</span>'
+                '<span style="color: red;">*** No URL ***</span>'
             )
-            self.able_buttons_and_edit()
+            self.enable_buttons_and_edit()
             return
 
-        if not self.url:
-            self.operation_browser_insert_html(
-                '<span style="color: red;">***   No URL   ***</span>'
-            )
-            self.able_buttons_and_edit()
-            return
-
-        civitai_url_parser = CivitalUrlParserRunner(self.url, self.httpx_client)
+        civitai_url_parser = CivitaiUrlParserRunner(self.url, self.httpx_client)
         civitai_url_parser.signals.UrlParser_Start_Signal.connect(self.handle_parser_started_signal)
         civitai_url_parser.signals.UrlParser_preliminary_signal.connect(self.handle_parser_preliminary_signal)
         civitai_url_parser.signals.UrlParser_Fail_Signal.connect(self.handle_parser_connect_to_api_failed_signal)
@@ -176,7 +159,7 @@ class MainWindow(QMainWindow):
                 self.operation_browser_insert_html(
                     f'<span style="color: green;">Test mode: {self.model_and_version_id= }</span><br>'
                 )
-                self.able_buttons_and_edit()
+                self.enable_buttons_and_edit()
             case False:  # parse failed or connection failed
                 if self.model_and_version_id == (None, None):
                     self.operation_browser_insert_html(
@@ -193,7 +176,7 @@ class MainWindow(QMainWindow):
                     'If there are no errors, it may be due to a connection issue. Try again later</span>'
                 )
                 if not self.batch_mode:
-                    self.able_buttons_and_edit()
+                    self.enable_buttons_and_edit()
                 else:
                     self.connect_failed_batch_url_list.append(url)
                     self.download_from_batch_url()
@@ -213,7 +196,7 @@ class MainWindow(QMainWindow):
             f'<span style="color: pink;">{message}</span><br>'
         )
         if not self.batch_mode:
-            self.able_buttons_and_edit()
+            self.enable_buttons_and_edit()
         else:
             self.connect_failed_batch_url_list.append(url)
             self.download_from_batch_url()
@@ -234,7 +217,7 @@ class MainWindow(QMainWindow):
                 f'Please check the URL.</span>'
             )
             if not self.batch_mode:
-                self.able_buttons_and_edit()
+                self.enable_buttons_and_edit()
             else:
                 self.connect_failed_batch_url_list.append(url)
                 self.download_from_batch_url()
@@ -274,7 +257,7 @@ class MainWindow(QMainWindow):
 
             for url in image_urls:
                 image_path = dir_path / url.split('/')[-1]
-                downloader = CivitaImageDownloadRunner(version_id, version_name, url, image_path, self.httpx_client)
+                downloader = CivitaiImageDownloadRunner(version_id, version_name, url, image_path, self.httpx_client)
                 downloader.signals.Image_download_started_signal.connect(self.handle_image_download_started_signal)
                 downloader.signals.Image_download_fail_signal.connect(self.handle_image_download_failed_signal)
                 downloader.signals.Image_download_completed_signal.connect(self.handle_image_download_completed_signal)
@@ -298,9 +281,6 @@ class MainWindow(QMainWindow):
         progress_layout.setStretch(0, 1)
         progress_layout.setStretch(1, 5)
 
-        # about progress_bar_info:
-        # {version_id: [ProgressBar widget, Downloaded, Executed, Quantity of all images, ProgressBar Layout], ... }
-        # self.progress_bar_info[version_id] = [progress_bar, 0, 0, image_count, progress_layout]
         self.progress_bar_info[version_id] = ProgressBarData(progress_layout=progress_layout,
                                                              progress_bar_widget=progress_bar,
                                                              completed=0,
@@ -361,7 +341,7 @@ class MainWindow(QMainWindow):
                     'Go to Help &gt; Show Failed URLs to view them.</span><br>'
                 )
             if not self.batch_mode:
-                self.able_buttons_and_edit()
+                self.enable_buttons_and_edit()
             else:
                 self.download_from_batch_url()
 
@@ -379,7 +359,7 @@ class MainWindow(QMainWindow):
             download_failed_urls_list.extend(iter(fail_urls))
         return download_failed_urls_list
 
-    def able_buttons_and_edit(self, enable: bool = True) -> None:
+    def enable_buttons_and_edit(self, enable: bool = True) -> None:
         """
         Enable/Disable buttons and url editor
         :param enable:
