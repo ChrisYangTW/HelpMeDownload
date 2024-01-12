@@ -138,6 +138,8 @@ class LoadingBatchUrlsWindow(QDialog):
         for error_url in match_error_url_list:
             self.check_message.append(f'{error_url}')
 
+        # todo: Should preprocessing be done to exclude invalid links?
+
 
 if __name__ == '__main__':
     from PySide6.QtWidgets import QMainWindow, QApplication

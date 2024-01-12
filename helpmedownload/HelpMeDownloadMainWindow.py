@@ -37,8 +37,8 @@ class MainWindow(QMainWindow):
         self.connect_failed_batch_url_list: list = []
 
         self.url: str = ''
-        self.model_and_version_id: tuple = ()
-        self.save_dir: Path | None = None
+        self.save_dir: Path = Path('.').absolute()
+        self.ui.folder_line_edit.setText(str(self.save_dir))
         self.progress_bar_alive_list: list = []
         self.progress_bar_info: dict = {}
         self.download_failed_count_each_model: int = 0
@@ -53,7 +53,7 @@ class MainWindow(QMainWindow):
         # self.ui.choose_folder_button.clicked.connect(self.select_storage_folder)
         self.ui.folder_line_edit.mousePressEvent = self.select_storage_folder
         self.ui.batch_push_button.clicked.connect(self.click_batch_button)
-        self.ui.go_push_button.clicked.connect(self.click_go_button)
+        self.ui.go_push_button.clicked.connect(self.start)
 
     def trigger_show_action(self, history: list, special: bool = False) -> None:
         """
@@ -70,6 +70,7 @@ class MainWindow(QMainWindow):
     def select_storage_folder(self, event: QMouseEvent) -> None:
         """
         Set the path of a folder for saving images
+        :param event: QMouseEvent
         :return:
         """
         if event.button() == Qt.LeftButton:
@@ -99,7 +100,7 @@ class MainWindow(QMainWindow):
     def download_from_batch_url(self):
         try:
             url = self.processing_batch_url_list.pop(0)
-            self.click_go_button(url_from_batch=url)
+            self.start(url_from_batch=url)
         except IndexError:
             self.batch_mode = False
             self.batch_url = self.connect_failed_batch_url_list
@@ -107,30 +108,22 @@ class MainWindow(QMainWindow):
             self.enable_buttons_and_edit()
             return
 
-    def click_go_button(self, url_from_batch: str = '') -> None:
+    def start(self, url_from_batch: str = '') -> None:
         """
         Parse the URL (using QThreadPool)
         :param url_from_batch:
         :return:
         """
-        if not self.save_dir:
-            QMessageBox.warning(self, 'Warning', 'Set the storage folder first')
-            return
-
         self.enable_buttons_and_edit(enable=False)
         self.url = url_from_batch or self.ui.url_line_edit.text().strip()
 
         if not self.url:
-            self.operation_browser_insert_html(
-                '<span style="color: red;">*** No URL ***</span>'
-            )
             self.enable_buttons_and_edit()
             return
 
         civitai_url_parser = CivitaiUrlParserRunner(self.url, self.httpx_client)
         civitai_url_parser.signals.UrlParser_Start_Signal.connect(self.handle_parser_started_signal)
-        civitai_url_parser.signals.UrlParser_preliminary_signal.connect(self.handle_parser_preliminary_signal)
-        civitai_url_parser.signals.UrlParser_Fail_Signal.connect(self.handle_parser_connect_to_api_failed_signal)
+        civitai_url_parser.signals.UrlParser_Preliminary_Signal.connect(self.handle_parser_preliminary_signal)
         civitai_url_parser.signals.UrlParser_Complete_Signal.connect(self.handle_parser_completed_signal)
 
         self.pool.start(civitai_url_parser)
@@ -143,58 +136,22 @@ class MainWindow(QMainWindow):
         """
         self.ui.operation_text_browser.append(started_message)
 
-    def handle_parser_preliminary_signal(self, model_id_and_version_id_and_status: tuple) -> None:
+    def handle_parser_preliminary_signal(self, error_info: tuple[str, str]) -> None:
         """
-        Display the corresponding content based on the contents of "model_and_version_and_status"
-        in the operation_text_browser
-        :param model_id_and_version_id_and_status:
+        Display parsing or connection error messages in the operation_text_browser
+        :param error_info:
         :return:
         """
-        self.model_and_version_id = model_id_and_version_id_and_status[:2]
-        status, error_message, url = model_id_and_version_id_and_status[2:]
-        assert url == self.url
+        error_message, url = error_info
 
-        match status:
-            case None:  # parser test mode
-                self.operation_browser_insert_html(
-                    f'<span style="color: green;">Test mode: {self.model_and_version_id= }</span><br>'
-                )
-                self.enable_buttons_and_edit()
-            case False:  # parse failed or connection failed
-                if self.model_and_version_id == (None, None):
-                    self.operation_browser_insert_html(
-                        f'<span style="color: pink;">{url} | Parse failed. {error_message}</span><br>'
-                    )
-                else:
-                    self.ui.operation_text_browser.append(
-                        f'{url} | Parse success [{str(self.model_and_version_id)}], '
-                        f'but connection to the URL failed. {error_message}'
-                    )
-                    self.ui.statusbar.showMessage('Connection to the URL failed.', 3000)
-                self.operation_browser_insert_html(
-                    '<span style="color: pink;">Confirm the URL. '
-                    'If there are no errors, it may be due to a connection issue. Try again later</span>'
-                )
-                if not self.batch_mode:
-                    self.enable_buttons_and_edit()
-                else:
-                    self.connect_failed_batch_url_list.append(url)
-                    self.download_from_batch_url()
-            case _:
-                self.ui.operation_text_browser.append(f'{url} | Parse success [{str(self.model_and_version_id)}]')
-
-    def handle_parser_connect_to_api_failed_signal(self, failed_message: tuple) -> None:
-        """
-        Display the string message received from UrlParser_connect_to_api_failed_signal in the operation_text_browser
-        :param failed_message:
-        :return:
-        """
-        message, url = failed_message
-        assert url == self.url
-
+        self.operation_browser_insert_html(f'<span style="color: pink;">{url} | {error_message}</span>')
         self.operation_browser_insert_html(
-            f'<span style="color: pink;">{message}</span><br>'
+            '<span style="color: pink;">'
+            'Confirm the URL. '
+            'If there are no errors, it may be due to a connection issue. Try again later'
+            '</span>'
         )
+
         if not self.batch_mode:
             self.enable_buttons_and_edit()
         else:

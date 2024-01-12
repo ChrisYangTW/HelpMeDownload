@@ -37,8 +37,7 @@ class CivitaiUrlParserRunnerSignals(QObject):
     Signals for CivitaiUrlParserRunner class
     """
     UrlParser_Start_Signal = Signal(str)
-    UrlParser_preliminary_signal = Signal(tuple)
-    UrlParser_Fail_Signal = Signal(tuple)
+    UrlParser_Preliminary_Signal = Signal(tuple)
     UrlParser_Complete_Signal = Signal(tuple)
 
 
@@ -68,34 +67,27 @@ class CivitaiUrlParserRunner(QRunnable):
 
     def get_model_and_version_id(self) -> UrlParseResultData:
         """
-        Get the analysis result and connection status of the URL, and emit the information (M_ID, V_ID, status)
-        to main thread
-        :return:
+        Get the analysis result and connection status of the URL, and emit the information (error_message, url)
+        to main thread if an exception occurs.
+        :return: UrlParseResultData
         """
-        error_message = ''
         try:
-            is_valid = self.httpx_client.get(self.url).status_code == httpx.codes.OK
+            if self.httpx_client.get(self.url).status_code == httpx.codes.OK:
+                if match := re.search(r'models/(?P<model_id>\d{4,6})[?]modelVersionId=(?P<version_id>\d{4,6})',
+                                      self.url):
+                    model_id, version_id = match['model_id'], match['version_id']
+                    return UrlParseResultData(model_id=model_id, version_id=version_id, is_valid=True)
+                elif match := re.search(r'models/(?P<model_id>\d{4,6})/?', self.url):
+                    model_id = match['model_id']
+                    return UrlParseResultData(model_id=model_id, is_valid=True)
+                else:
+                    # Parsing failed, as the link is not a valid civitai.com link
+                    error_message = 'Parse failed.(not a valid civitai.com link)'
+                    self.signals.UrlParser_Preliminary_Signal.emit((error_message, self.url))
+                    return UrlParseResultData(is_valid=False)
         except (httpx.TimeoutException, httpx.RequestError, httpx.ReadTimeout) as e:
-            error_message = e
-            is_valid = False
-
-        if match := re.search(r'models/(?P<model_id>\d{4,6})[?]modelVersionId=(?P<version_id>\d{4,6})', self.url):
-            model_id, version_id = match['model_id'], match['version_id']
-            self.signals.UrlParser_preliminary_signal.emit(
-                (model_id, version_id, is_valid, error_message, self.url)
-            )
-            return UrlParseResultData(model_id=model_id, version_id=version_id, is_valid=is_valid)
-        elif match := re.search(r'models/(?P<model_id>\d{4,6})/?', self.url):
-            model_id = match['model_id']
-            self.signals.UrlParser_preliminary_signal.emit(
-                (model_id, None, is_valid, error_message, self.url)
-            )
-            return UrlParseResultData(model_id=model_id, is_valid=is_valid)
-        else:
-            # parse fails, set the is_valid to false
-            self.signals.UrlParser_preliminary_signal.emit(
-                (None, None, False, error_message, self.url)
-            )
+            error_message = str(e)
+            self.signals.UrlParser_Preliminary_Signal.emit((error_message, self.url))
             return UrlParseResultData(is_valid=False)
 
     def get_version_info(self, parse_result: UrlParseResultData) -> None:
@@ -111,10 +103,8 @@ class CivitaiUrlParserRunner(QRunnable):
             response = self.httpx_client.get(self.Civitai_Models_API + model_id)
             assert (response.status_code == httpx.codes.OK), 'Response code is not OK when trying to get version info'
         except (httpx.TimeoutException, httpx.RequestError, httpx.ReadTimeout, AssertionError) as e:
-            print(e)
-            self.signals.UrlParser_Fail_Signal.emit(
-                (f'{self.url} | Connection to the API failed. Try again later.', self.url)
-            )
+            error_message = str(e)
+            self.signals.UrlParser_Preliminary_Signal.emit((error_message, self.url))
             return
 
         model_data = response.json()
@@ -212,10 +202,8 @@ class CivitaiUrlParserRunner(QRunnable):
             response = self.httpx_client.get(self.Civitai_Images_API, params=params)
             assert (response.status_code == httpx.codes.OK), 'Response code is not OK when trying to get image url info'
         except (httpx.TimeoutException, httpx.RequestError, httpx.ReadTimeout, AssertionError) as e:
-            print(e)
-            self.signals.UrlParser_Fail_Signal.emit(
-                (f'{self.url} | Failed to retrieve image links. Try again later.', self.url)
-            )
+            error_message = str(e)
+            self.signals.UrlParser_Preliminary_Signal.emit((error_message, self.url))
             return image_urls
 
         image_data = response.json()
