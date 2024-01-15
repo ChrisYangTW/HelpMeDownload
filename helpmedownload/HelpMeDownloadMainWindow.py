@@ -34,7 +34,7 @@ class MainWindow(QMainWindow):
         self.batch_mode: bool = False
         self.batch_url: list = []
         self.processing_batch_url_list: list = []
-        self.batch_failed_url: list = []
+        self.batch_failed_urls: list = []
 
         self.url: str = ''
         self.save_dir: Path = Path('.').absolute()
@@ -77,7 +77,7 @@ class MainWindow(QMainWindow):
                 self.ui.folder_line_edit.setText(folder_path)
                 self.save_dir = Path(folder_path)
 
-    def click_batch_button(self):
+    def click_batch_button(self) -> None:
         """
         Pop up a QDialog window for handling batch urls
         :return:
@@ -85,15 +85,16 @@ class MainWindow(QMainWindow):
         if not self.save_dir:
             QMessageBox.warning(self, 'Warning', 'Set the storage folder first')
             return
-
         load_urls_window = LoadingBatchUrlsWindow(batch_url_list=self.batch_url, parent=self)
-        load_urls_window.loading_batch_urls_signal.connect(self.handle_loading_batch_urls_signal)
+        load_urls_window.Loading_Batch_Urls_Signal.connect(self.handle_loading_batch_urls_signal)
         load_urls_window.setWindowModality(Qt.ApplicationModal)
         load_urls_window.show()
 
-    def handle_loading_batch_urls_signal(self, url_list: list):
-        self.batch_url = self.processing_batch_url_list = url_list
+    @Slot(list)
+    def handle_loading_batch_urls_signal(self, urls: list) -> None:
+        self.batch_url = self.processing_batch_url_list = urls
         self.batch_mode = True
+        self.clear_progress_bar()
         self.download_from_batch_url()
 
     def download_from_batch_url(self):
@@ -102,8 +103,8 @@ class MainWindow(QMainWindow):
             self.start(url_from_batch=url)
         except IndexError:
             self.batch_mode = False
-            self.batch_url = self.batch_failed_url
-            self.batch_failed_url.clear()
+            self.batch_url = self.batch_failed_urls[:]
+            self.batch_failed_urls.clear()
             self.enable_buttons_and_edit()
             return
 
@@ -150,7 +151,7 @@ class MainWindow(QMainWindow):
         if not self.batch_mode:
             self.enable_buttons_and_edit()
         else:
-            self.batch_failed_url.append(url)
+            self.batch_failed_urls.append(url)
             self.download_from_batch_url()
 
     def handle_parser_completed_signal(self, completed_message: tuple) -> None:
@@ -161,8 +162,6 @@ class MainWindow(QMainWindow):
         :return:
         """
         model_name, model_version_info, url = completed_message
-        assert url == self.url
-
         if not model_version_info:
             self.operation_browser_insert_html(
                 f'<span style="color: pink;">{url} | Unable to retrieve content from the API. '
@@ -171,13 +170,15 @@ class MainWindow(QMainWindow):
             if not self.batch_mode:
                 self.enable_buttons_and_edit()
             else:
-                self.batch_failed_url.append(url)
+                self.batch_failed_urls.append(url)
                 self.download_from_batch_url()
             return
 
         self.ui.operation_text_browser.append(f'{url} | Preparation complete. Start to download')
         self.start_to_download(model_version_info)
         # self.add_checkbox_option()  #  not implemented
+
+        # todo: have to handle model_version_info for batch mode
 
     def add_checkbox_option(self):
         # test function,  not implemented
@@ -190,8 +191,9 @@ class MainWindow(QMainWindow):
         :param version_info:
         :return:
         """
-        self.clear_progress_bar()
-        self.download_failed_info.clear()
+        if not self.batch_mode:
+            self.clear_progress_bar()
+            self.download_failed_info.clear()
 
         for version_id, version_info in version_info.items():
             version_info: VersionInfoData

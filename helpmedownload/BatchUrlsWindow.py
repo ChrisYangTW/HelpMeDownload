@@ -9,7 +9,7 @@ class LoadingBatchUrlsWindow(QDialog):
     """
     QDialog window for loading batch Urls
     """
-    loading_batch_urls_signal = Signal(list)
+    Loading_Batch_Urls_Signal = Signal(list)
 
     def __init__(self, batch_url_list: list = None, parent=None):
         super().__init__(parent)
@@ -129,7 +129,7 @@ class LoadingBatchUrlsWindow(QDialog):
         match_error_url_list = [url for url in url_list if not pattern.match(url)]
 
         if not match_error_url_list:
-            self.loading_batch_urls_signal.emit(url_list)
+            self.Loading_Batch_Urls_Signal.emit(url_list)
             self.reject(call_from_confirm_button=True)
             return
 
@@ -137,8 +137,6 @@ class LoadingBatchUrlsWindow(QDialog):
         self.check_message.append('The following URLs do not match the specified pattern:')
         for error_url in match_error_url_list:
             self.check_message.append(f'{error_url}')
-
-        # todo: Should preprocessing be done to exclude invalid links?
 
 
 if __name__ == '__main__':
