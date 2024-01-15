@@ -134,7 +134,7 @@ class LoadingBatchUrlsWindow(QDialog):
             return
 
         self.check_message.clear()
-        self.check_message.append('The following URLs do not match the specified pattern')
+        self.check_message.append('The following URLs do not match the specified pattern:')
         for error_url in match_error_url_list:
             self.check_message.append(f'{error_url}')
 

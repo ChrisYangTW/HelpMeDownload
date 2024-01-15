@@ -5,9 +5,8 @@ class HistoryWindow(QDialog):
     """
     QDialog window for show history
     """
-    def __init__(self, history: list = None, special: bool = False, parent=None):
+    def __init__(self, history: list = None, special: bool = False, parent=None) -> None:
         super().__init__(parent)
-        self.setWindowTitle('History')
         self.setGeometry(100, 100, 600, 400)
 
         v_layout = QVBoxLayout(self)
@@ -21,13 +20,15 @@ class HistoryWindow(QDialog):
 
         self.history = history
         if special:
-            self.show_history_to_text_browser_for_failed_urls()
+            self.setWindowTitle('Failed Urls')
+            self.show_failed_urls_to_text_browser()
         else:
+            self.setWindowTitle('History')
             self.show_history_to_text_browser()
 
-    def show_history_to_text_browser_for_failed_urls(self):
+    def show_failed_urls_to_text_browser(self) -> None:
         """
-        Append the historical records to TextBrowser (Using HTML syntax to make URLs clickable for users)
+        Append the failed urls to TextBrowser (Using HTML syntax to make URLs clickable for users)
         :return:
         """
         self.display_text_browser.setOpenExternalLinks(True)
@@ -37,7 +38,7 @@ class HistoryWindow(QDialog):
             else:
                 self.display_text_browser.insertHtml(f'<a href="{history}">{history}</a><br>')
 
-    def show_history_to_text_browser(self):
+    def show_history_to_text_browser(self) -> None:
         """
         Append the historical records to TextBrowser
         :return:
@@ -46,7 +47,7 @@ class HistoryWindow(QDialog):
             self.display_text_browser.append(history)
 
     # Overrides the reject() to allow users to cancel the dialog using the ESC key
-    def reject(self):
+    def reject(self) -> None:
         self.done(0)
 
 
