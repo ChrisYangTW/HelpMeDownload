@@ -28,6 +28,7 @@ class VersionInfoData:
     creator: str
     model_id: str
     model_name: str
+    hyperlink: str
     image_urls: list = field(default_factory=list)
     file_info: dict[str, FileInfoData] = field(default_factory=dict)
     is_complete: bool = False
@@ -43,7 +44,7 @@ class CivitaiUrlParserRunnerSignals(QObject):
 
 class CivitaiUrlParserRunner(QRunnable):
     """
-    Parse the URL to obtain the model name and its related information. (self.model_name, self.model_version_info)
+    Parse the URL to obtain the model name and its related information. (self.model_name, self.version_info)
     """
     Civitai_Models_API: str = r'https://civitai.com/api/v1/models/'
     Civitai_Images_API: str = r'https://civitai.com/api/v1/images'
@@ -54,7 +55,7 @@ class CivitaiUrlParserRunner(QRunnable):
         self.url: str = url
         self.httpx_client: httpx.Client = httpx_client
 
-        self.model_version_info: dict[str, VersionInfoData] = {}
+        self.version_info: dict[str, VersionInfoData] = {}
         self.signals = CivitaiUrlParserRunnerSignals()
 
     @Slot()
@@ -93,7 +94,7 @@ class CivitaiUrlParserRunner(QRunnable):
     def get_version_info(self, parse_result: UrlParseResultData) -> None:
         """
         Get the information {version id: {version name, creator name, image url}} contained in the model.
-        finally, emit (self.model_name, self.model_version_info) to UrlParser_Complete_Signal.
+        finally, emit (self.model_name, self.version_info) to UrlParser_Complete_Signal.
         :param parse_result:
         :return:
         """
@@ -124,10 +125,10 @@ class CivitaiUrlParserRunner(QRunnable):
             self.construct_version_info_data(version_id, version_data, model_id, model_name, creator_name)
 
         self.signals.UrlParser_Complete_Signal.emit(
-            (model_name, self.model_version_info, self.url)
+            (model_name, self.version_info, self.url)
         )
         """
-        about self.model_version_info
+        about self.version_info
         {'version_id': {'name': 'version_name',
                         'creator': 'creator_name',
                         'image_url': ['url1',
@@ -149,7 +150,7 @@ class CivitaiUrlParserRunner(QRunnable):
         """
     def construct_version_info_data(self, version_id, version_data, model_id, model_name, creator_name) -> None:
         """
-        Construct self.model_version_info
+        Construct self.version_info
         :param version_id:
         :param version_data:
         :param model_id:
@@ -158,17 +159,20 @@ class CivitaiUrlParserRunner(QRunnable):
         :return:
         """
         version_name = version_data['name']
+        hyperlink = f'https://civitai.com/models/{model_id}?modelVersionId={version_id}'
         image_urls, is_complete = self.get_image_url(version_id, creator_name)
         file_info = self.get_version_file_info(version_data)
-        self.model_version_info[version_id] = VersionInfoData(name=version_name,
-                                                              creator=creator_name,
-                                                              model_id=model_id,
-                                                              model_name=model_name,
-                                                              image_urls=image_urls,
-                                                              file_info=file_info,
-                                                              is_complete=is_complete)
+        self.version_info[version_id] = VersionInfoData(name=version_name,
+                                                        creator=creator_name,
+                                                        model_id=model_id,
+                                                        model_name=model_name,
+                                                        hyperlink=hyperlink,
+                                                        image_urls=image_urls,
+                                                        file_info=file_info,
+                                                        is_complete=is_complete)
 
-    def get_version_file_info(self, version_data: dict) -> dict:
+    @staticmethod
+    def get_version_file_info(version_data: dict) -> dict:
         """
         :param version_data:
         :return:
@@ -190,7 +194,7 @@ class CivitaiUrlParserRunner(QRunnable):
     def get_image_url(self, version_id: str, username: str) -> tuple[list, bool]:
         """
         Get the URL of the example image provided by the creator and write it to
-        self.model_version_info[version_id]['image_url']
+        self.version_info[version_id]['image_url']
         :return:
         """
         image_urls: list = []
@@ -228,11 +232,11 @@ class CivitaiImageDownloadRunner(QRunnable):
     """
     Download images with support for QThreadPool
     """
-    def __init__(self, version_id: str, version_name: str, image_url: str, save_path: Path, client: httpx.Client):
+    def __init__(self, version_id: str, version_name: str, url: str, save_path: Path, client: httpx.Client) -> None:
         super().__init__()
         self.version_id = version_id
         self.version_name = version_name
-        self.url = image_url
+        self.url = url
         self.save_path = save_path
         self.httpx_client = client
         self.signals = CivitaiImageDownloadRunnerSignals()
@@ -259,10 +263,10 @@ class CivitaiImageDownloadRunner(QRunnable):
 
         except httpx.HTTPStatusError as e:
             print('\033[33m' + f'HTTPStatusError: {self.url}. Reason: {str(e)}' + '\033[0m')
-            self.signals.Image_Download_Fail_Signal.emit((self.version_id, f'Failed_HTTPStatusError:: {self.url}'))
+            self.signals.Image_Download_Fail_Signal.emit((self.version_id, f'HTTPStatusError:: {self.url}'))
         except httpx.ReadTimeout as e:
             print('\033[33m' + f'ReadTimeout: {self.url}. Reason: {str(e)}' + '\033[0m')
-            self.signals.Image_Download_Fail_Signal.emit((self.version_id, f'Failed_ReadTimeout:: {self.url}'))
+            self.signals.Image_Download_Fail_Signal.emit((self.version_id, f'ReadTimeout:: {self.url}'))
         except Exception as e:
             print('\033[33m' + f'Exception: {self.url}. Reason: {str(e)}' + '\033[0m')
-            self.signals.Image_Download_Fail_Signal.emit((self.version_id, f'Failed_Exception:: {self.url}'))
+            self.signals.Image_Download_Fail_Signal.emit((self.version_id, f'Exception:: {self.url}'))
