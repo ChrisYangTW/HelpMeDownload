@@ -1,7 +1,7 @@
-# Help Me Download (v0.1.1)
+# Help Me Download (v0.1.2)
 Used to download sample images provided by various model creators on civitai.com.
 
-![sample1](examples/sample1_v0_1_1.png)
+![sample1](examples/sample1_v0_1_2.png)
 
 ## Installation
 Use the git clone command to clone the repository.
@@ -18,12 +18,9 @@ Finally, run the main.py
 python3 main.py
 ```
 
-## Executable
-You can use pyinstaller, py2app, py2exe to convert the code into an executable file that is compatible with the system.
-
 ## Usage
-![sample2](examples/sample2_v0_1_1.png)
-1. Click the "Folder" button to select the image storage path.
+![sample2](examples/sample2_v0_1_2.png)
+1. Click the "Folder" line to select the image storage path.
 2. Import URLs in batch or directly paste URLs. (Refer to point 4, 5)
 3. Click the "Go" button to start.
 4. About import URLs in batch. (Click the "Batch" button)
@@ -31,7 +28,7 @@ You can use pyinstaller, py2app, py2exe to convert the code into an executable f
    * Paste the URLs line by line.
    * "Load from file" button is also available to import a .txt file (where each URL is listed on a separate line).
    * Clicking "Confirm" will perform an initial validation of the URLs, and if there are no issues, the download task will be initiated.
-   * It is recommended not to exceed ten URLs at once to ensure the server responds appropriately.
+   * It is recommended not to exceed too many URLs at once to ensure the server responds appropriately.
    * When using batch downloading, the completed URLs will be removed from the list. (That means the URLs that failed to connect will remain in the list for further download attempts.)
 5. About URL format.
    * Model URL. (Download images for all versions)
@@ -39,13 +36,11 @@ You can use pyinstaller, py2app, py2exe to convert the code into an executable f
    * Individual version URL. (Download images for the specific version only)
    * ![Url2](examples/Url2.png)
 6. Option:
-   * Show > Show History. You can view the download history.
    * Show > Show Failed URLs. You can view the failed download links (if any).
 
 ## Test environment
 ```
-Python 3.11
-Macbook Pro16 M1 (OS Version 13.4 (22F66))
+Python 3.12 (on macOS 14.2.1)
 ```
 
 ## Additional note

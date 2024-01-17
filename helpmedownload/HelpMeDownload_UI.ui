@@ -16,7 +16,7 @@
   <widget class="QWidget" name="centralwidget">
    <layout class="QVBoxLayout" name="verticalLayout" stretch="1,1,2,0,0,2">
     <item>
-     <layout class="QHBoxLayout" name="horizontalLayout_1" stretch="2,14,2">
+     <layout class="QHBoxLayout" name="horizontalLayout_1" stretch="2,16">
       <item>
        <widget class="QLabel" name="folder_label">
         <property name="text">
@@ -34,13 +34,6 @@
         </property>
         <property name="readOnly">
          <bool>true</bool>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QPushButton" name="choose_folder_button">
-        <property name="text">
-         <string>Folder</string>
         </property>
        </widget>
       </item>

@@ -161,6 +161,7 @@ cython_debug/
 .idea/
 
 example/
+DownloadTemp/
 try_code/
 .DS_Store
 

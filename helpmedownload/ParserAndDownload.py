@@ -223,7 +223,6 @@ class CivitaiImageDownloadRunnerSignals(QObject):
     """
     Signals for CivitaiImageDownloadRunner class
     """
-    Image_Download_Start_Signal = Signal(str)
     Image_Download_Fail_Signal = Signal(tuple)
     Image_Download_Complete_Signal = Signal(tuple)
 
@@ -236,37 +235,35 @@ class CivitaiImageDownloadRunner(QRunnable):
         super().__init__()
         self.version_id = version_id
         self.version_name = version_name
-        self.url = url
+        self.image_url = url
         self.save_path = save_path
         self.httpx_client = client
         self.signals = CivitaiImageDownloadRunnerSignals()
 
     @Slot()
     def run(self) -> None:
-        self.signals.Image_Download_Start_Signal.emit(f'Start to: {self.url}')
-
         try:
-            response = self.httpx_client.get(self.url, follow_redirects=True)
+            response = self.httpx_client.get(self.image_url, follow_redirects=True)
             response.raise_for_status()
 
             if response.status_code == httpx.codes.OK:
                 with self.save_path.open('wb') as f:
                     for data in response.iter_bytes():
                         f.write(data)
-                self.signals.Image_Download_Complete_Signal.emit((self.version_id, f'Finished: {self.url}'))
+                self.signals.Image_Download_Complete_Signal.emit((self.version_id, self.image_url))
             elif response.status_code == httpx.codes.FOUND:
-                print('\033[33m' + f'do 304 for {self.url}' + '\033[0m')
-                self.url = response.headers.get('Location')
+                # print('\033[33m' + f'do 304 for {self.image_url}' + '\033[0m')
+                self.image_url = response.headers.get('Location')
                 return self.run()
             else:
                 raise ValueError(f'Unexpected status code {response.status_code}')
 
         except httpx.HTTPStatusError as e:
-            print('\033[33m' + f'HTTPStatusError: {self.url}. Reason: {str(e)}' + '\033[0m')
-            self.signals.Image_Download_Fail_Signal.emit((self.version_id, f'HTTPStatusError:: {self.url}'))
+            # print('\033[33m' + f'HTTPStatusError: {self.image_url}. Reason: {str(e)}' + '\033[0m')
+            self.signals.Image_Download_Fail_Signal.emit((self.version_id, self.image_url))
         except httpx.ReadTimeout as e:
-            print('\033[33m' + f'ReadTimeout: {self.url}. Reason: {str(e)}' + '\033[0m')
-            self.signals.Image_Download_Fail_Signal.emit((self.version_id, f'ReadTimeout:: {self.url}'))
+            # print('\033[33m' + f'ReadTimeout: {self.image_url}. Reason: {str(e)}' + '\033[0m')
+            self.signals.Image_Download_Fail_Signal.emit((self.version_id, self.image_url))
         except Exception as e:
-            print('\033[33m' + f'Exception: {self.url}. Reason: {str(e)}' + '\033[0m')
-            self.signals.Image_Download_Fail_Signal.emit((self.version_id, f'Exception:: {self.url}'))
+            # print('\033[33m' + f'Exception: {self.image_url}. Reason: {str(e)}' + '\033[0m')
+            self.signals.Image_Download_Fail_Signal.emit((self.version_id, self.image_url))

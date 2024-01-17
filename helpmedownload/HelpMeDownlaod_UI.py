@@ -49,14 +49,8 @@ class Ui_MainWindow(object):
 
         self.horizontalLayout_1.addWidget(self.folder_line_edit)
 
-        self.choose_folder_button = QPushButton(self.centralwidget)
-        self.choose_folder_button.setObjectName(u"choose_folder_button")
-
-        self.horizontalLayout_1.addWidget(self.choose_folder_button)
-
         self.horizontalLayout_1.setStretch(0, 2)
-        self.horizontalLayout_1.setStretch(1, 14)
-        self.horizontalLayout_1.setStretch(2, 2)
+        self.horizontalLayout_1.setStretch(1, 16)
 
         self.verticalLayout.addLayout(self.horizontalLayout_1)
 
@@ -140,7 +134,6 @@ class Ui_MainWindow(object):
         self.actionShowHistory.setText(QCoreApplication.translate("MainWindow", u"Show History", None))
         self.actionShowFailUrl.setText(QCoreApplication.translate("MainWindow", u"Show Failed URLs", None))
         self.folder_label.setText(QCoreApplication.translate("MainWindow", u"Folder", None))
-        self.choose_folder_button.setText(QCoreApplication.translate("MainWindow", u"Folder", None))
         self.url_label.setText(QCoreApplication.translate("MainWindow", u"URL", None))
         self.batch_push_button.setText(QCoreApplication.translate("MainWindow", u"Batch", None))
         self.go_push_button.setText(QCoreApplication.translate("MainWindow", u"Go", None))
