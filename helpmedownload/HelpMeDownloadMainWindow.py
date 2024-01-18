@@ -35,7 +35,7 @@ class MainWindow(QMainWindow):
         self.batch_url: list = []
         self.batch_failed_urls: list = []
 
-        self.save_dir: Path = Path('.').absolute() / 'DownloadTemp'
+        self.save_dir: Path = Path(__file__).parent.parent / 'DownloadTemp'
         if not self.save_dir.exists():
             self.save_dir.mkdir(parents=True)
         self.ui.folder_line_edit.setText(str(self.save_dir))

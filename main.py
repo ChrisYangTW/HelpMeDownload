@@ -12,5 +12,5 @@ if __name__ == "__main__":
         app.setStyle(QStyleFactory.create('Fusion'))
     window.show()
     app.aboutToQuit.connect(window.clear_threadpool)
-    # app.aboutToQuit.connect(app.quit)
+    app.aboutToQuit.connect(app.quit)
     sys.exit(app.exec())
